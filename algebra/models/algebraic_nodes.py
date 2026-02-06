@@ -1,5 +1,4 @@
 from atomic_nodes import *
-from models.atomic_nodes import Expression
 
 class BinaryOperation(Expression):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:

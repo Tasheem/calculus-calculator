@@ -1,4 +1,4 @@
-from models.atomic_nodes import *
+from algebra.models.atomic_nodes import *
 
 def test_constant_1():
     five = Constant(5)
