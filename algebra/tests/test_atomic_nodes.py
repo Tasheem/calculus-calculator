@@ -22,3 +22,23 @@ def test_variable_3():
         assert False
     except:
         assert True
+
+def test_constant_str_1():
+    nine = Constant(9)
+    assert str(nine) == "9"
+
+def test_constant_str_2():
+    zero = Constant(float("inf"))
+    assert str(zero) == "inf"
+
+def test_constant_str_3():
+    nine = Constant(-15)
+    assert str(nine) == "-15"
+
+def test_variable_str_1():
+    nine = Variable("x")
+    assert str(nine) == "x"
+
+def test_variable_str_2():
+    nine = Variable("y")
+    assert str(nine) == "y"

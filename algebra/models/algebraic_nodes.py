@@ -1,4 +1,4 @@
-from atomic_nodes import *
+from algebra.models.atomic_nodes import *
 
 class BinaryOperation(Expression):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
@@ -9,13 +9,25 @@ class BinaryOperation(Expression):
         self.right_side = right_side
 
     def __str__(self):
-        return self._stringify(self)
+        return self._stringify(self, None)
 
-    def _stringify(self, expression: Expression | None):
+    def _stringify(self, expression: Expression | None, parent: Expression | None):
         if expression is None:
             return ""
         
-        return ""
+        if isinstance(expression, BinaryOperation):
+            equation_body = ""
+            if self.operation == "^":
+                f"{self._stringify(expression.left_side, expression)}{self.operation}{self._stringify(expression.right_side, expression)}"
+            else:
+                equation_body = f"{self._stringify(expression.left_side, expression)} {self.operation} {self._stringify(expression.right_side, expression)}"
+            
+            if parent is None:
+                return equation_body
+            else:
+                return f"({equation_body})"
+        
+        return str(expression)
     
     def compute(self):
         return self._binary_compute(self)

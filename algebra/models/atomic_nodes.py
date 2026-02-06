@@ -1,8 +1,9 @@
-from typing import Type
-
 class Expression:
     def __init__(self) -> None:
         pass
+
+    def __str__(self) -> str:
+        return ""
 
     def compute[T](self: T) -> T:
         return self
@@ -16,6 +17,9 @@ class Constant(Expression):
 
         self.value = value
 
+    def __str__(self):
+        return str(self.value)
+
     def copy(self):
         return Constant(self.value)
 
@@ -27,6 +31,9 @@ class Variable(Expression):
             raise ValueError("A variable can only be a char.")
 
         self.name = name
+
+    def __str__(self) -> str:
+        return self.name
 
     def copy(self):
         return Variable(self.name)
