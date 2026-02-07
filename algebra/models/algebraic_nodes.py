@@ -17,12 +17,12 @@ class BinaryOperation(Expression):
         
         if isinstance(expression, BinaryOperation):
             equation_body = ""
-            if self.operation == "^":
-                f"{self._stringify(expression.left_side, expression)}{self.operation}{self._stringify(expression.right_side, expression)}"
+            if expression.operation == "^":
+                equation_body = f"{self._stringify(expression.left_side, expression)}{expression.operation}{self._stringify(expression.right_side, expression)}"
             else:
-                equation_body = f"{self._stringify(expression.left_side, expression)} {self.operation} {self._stringify(expression.right_side, expression)}"
+                equation_body = f"{self._stringify(expression.left_side, expression)} {expression.operation} {self._stringify(expression.right_side, expression)}"
             
-            if parent is None:
+            if parent is None or isinstance(expression, Power):
                 return equation_body
             else:
                 return f"({equation_body})"
