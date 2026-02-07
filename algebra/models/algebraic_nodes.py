@@ -58,6 +58,12 @@ class BinaryOperation(Expression):
                     raise ValueError("Unknown Binary Expression")
                 
                 return Constant(value)
+            else:
+                simplified = expression.copy()
+                simplified.left_side = left_side
+                simplified.right_side = right_side
+
+                return simplified
             
         return expression.copy()
             
@@ -86,6 +92,9 @@ class Product(BinaryOperation):
 class Quotient(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "/", right_side)
+
+        self.numerator = left_side
+        self.denominator = right_side
 
     def copy(self):
         return Quotient(self.left_side, self.right_side)
