@@ -103,5 +103,8 @@ class Power(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "^", right_side)
 
+        self.base = left_side
+        self.exponent = right_side
+
     def copy(self):
         return Power(self.left_side, self.right_side)
