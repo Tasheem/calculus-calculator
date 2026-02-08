@@ -91,8 +91,7 @@ def test_compute_3():
 
     assert res.right_side.value == 7
 
-# x^2 / (2 + x)
-# Need to combine like terms
+# x² / (2 + x)
 def test_compute_4():
     x = Variable("x")
     two = Constant(2)
@@ -106,8 +105,13 @@ def test_compute_4():
     res = equation.compute()
 
     assert isinstance(res, Quotient)
-    assert isinstance(res.left_side, Variable)
-    assert isinstance(res.right_side, Constant)
-    
-    assert res.left_side.name == "x"
-    assert res.right_side.value == 2
+    assert isinstance(res.numerator, Power)
+    assert isinstance(res.numerator.base, Variable)
+    assert isinstance(res.numerator.exponent, Constant)
+    assert res.numerator.base.name == "x"
+    assert res.numerator.exponent.value == 2
+    assert isinstance(res.denominator, Sum)
+    assert isinstance(res.denominator.left_side, Constant)
+    assert isinstance(res.denominator.right_side, Variable)
+    assert res.denominator.left_side.value == 2
+    assert res.denominator.right_side.name == "x"
