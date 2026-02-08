@@ -66,28 +66,27 @@ class BinaryOperation(Expression):
                 return simplified
             
         return expression.copy()
-            
         
 class Sum(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "+", right_side)
 
     def copy(self):
-        return Sum(self.left_side, self.right_side)
+        return Sum(self.left_side.copy(), self.right_side.copy())
 
 class Difference(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "-", right_side)
 
     def copy(self):
-        return Difference(self.left_side, self.right_side)
+        return Difference(self.left_side.copy(), self.right_side.copy())
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "*", right_side)
 
     def copy(self):
-        return Product(self.left_side, self.right_side)
+        return Product(self.left_side.copy(), self.right_side.copy())
 
 class Quotient(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -97,7 +96,7 @@ class Quotient(BinaryOperation):
         self.denominator = right_side
 
     def copy(self):
-        return Quotient(self.left_side, self.right_side)
+        return Quotient(self.left_side.copy(), self.right_side.copy())
 
 class Power(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -107,4 +106,4 @@ class Power(BinaryOperation):
         self.exponent = right_side
 
     def copy(self):
-        return Power(self.left_side, self.right_side)
+        return Power(self.left_side.copy(), self.right_side.copy())
