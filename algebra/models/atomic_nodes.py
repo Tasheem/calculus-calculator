@@ -4,6 +4,12 @@ class Expression:
 
     def __str__(self) -> str:
         return ""
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
+    
+    def __eq__(self, value: object) -> bool:
+        return str(self) == str(value)
 
     def compute[T](self: T) -> T:
         return self

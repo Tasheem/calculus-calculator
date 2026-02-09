@@ -1,4 +1,5 @@
 from algebra.models.atomic_nodes import *
+from algebra.models.atomic_nodes import Expression
 
 class BinaryOperation(Expression):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
@@ -66,6 +67,55 @@ class BinaryOperation(Expression):
                 return simplified
             
         return expression.copy()
+    
+    def simplify(self) -> Expression:
+        raise RuntimeError("All subclasses of BinaryOperation should override the simplify() method.")
+    
+    def _find_like_terms(self, expression: Expression, map: dict[Expression, list[int]], distribute_minus: bool):
+        if isinstance(expression, Variable):
+            value = -1 if distribute_minus else 1
+            self._add_to_map(map, expression, value)
+
+            return True
+        elif isinstance(expression, Product):
+            if isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Variable):
+                key = expression.right_side
+                value = int(expression.left_side.value)
+                self._add_to_map(map, key, -value if distribute_minus else value)
+
+                return True
+            elif isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Power):
+                key = expression.right_side
+                value = int(expression.left_side.value)
+                self._add_to_map(map, key, -value if distribute_minus else value)
+
+                return True
+            return False
+        elif isinstance(expression, Power):
+            base = expression.base
+            exponent = expression.exponent
+
+            if isinstance(base, Variable) and isinstance(exponent, Constant):
+                self._add_to_map(map, expression, -1 if distribute_minus else 1)
+                return True
+            
+            return False
+        elif isinstance(expression, (Sum, Difference)):
+            # Recurse left and right
+            left_is_valid = self._find_like_terms(expression.left_side, map, False)
+            right_is_valid = self._find_like_terms(expression.right_side, map, isinstance(expression, Difference))
+
+            return left_is_valid and right_is_valid
+        else:
+            # Return False to indicate the root expression cannot be evaluated to combine like terms.
+            return False
+        
+    def _add_to_map(self, map: dict[Expression, list[int]], key: Expression, value: int):
+        if key in map:
+            like_terms = map[key]
+            like_terms.append(value)
+        else:
+            map[key] = [value]
         
 class Sum(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -73,6 +123,15 @@ class Sum(BinaryOperation):
 
     def copy(self):
         return Sum(self.left_side.copy(), self.right_side.copy())
+    
+    def simplify(self) -> Expression:
+        map: dict[Expression, list[int]] = {}
+        is_valid = self._find_like_terms(self, map, False)
+        
+        if is_valid and len(map) > 0:
+            return Constant(0)
+        
+        return Constant(0)
 
 class Difference(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
