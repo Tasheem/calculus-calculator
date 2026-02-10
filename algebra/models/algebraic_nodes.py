@@ -1,5 +1,5 @@
 from algebra.models.atomic_nodes import *
-from algebra.models.atomic_nodes import Expression
+from utils.string_utils import *
 
 class BinaryOperation(Expression):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
@@ -19,7 +19,7 @@ class BinaryOperation(Expression):
         if isinstance(expression, BinaryOperation):
             equation_body = ""
             if expression.operation == "^":
-                equation_body = f"{self._stringify(expression.left_side, expression)}{expression.operation}{self._stringify(expression.right_side, expression)}"
+                equation_body = f"{self._stringify(expression.left_side, expression)}{superscript(int(expression.right_side.value)) if isinstance(expression.right_side, Constant) else "^" + self._stringify(expression.right_side, expression)}"
             else:
                 equation_body = f"{self._stringify(expression.left_side, expression)} {expression.operation} {self._stringify(expression.right_side, expression)}"
             
