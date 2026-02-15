@@ -119,6 +119,7 @@ def test_compute_4():
 # 2x² + 5x + 7x + 9
 # Key: x² -> Value: [2]
 # Key: x -> Value: [5, 7]
+# Key: 1 -> Value: [9]
 def test_find_like_terms_1():
     two_deg = Product(Constant(2), Power(Variable("x"), Constant(2)))
     five_x = Product(Constant(5), Variable("x"))
@@ -131,16 +132,23 @@ def test_find_like_terms_1():
 
     map = equation.find_like_terms()
 
-    assert len(map) == 2
+    assert len(map) == 3
     assert "x²" in map
     assert "x" in map
+    assert "1" in map
+
     x_squared_coefficients = map[Power(Variable("x"), Constant(2))]
     assert len(x_squared_coefficients) == 1
     assert x_squared_coefficients[0] == 2
+
     x_coefficients = map[Variable("x")]
     assert len(x_coefficients) == 2
     assert 5 in x_coefficients
     assert 7 in x_coefficients
+
+    constants = map[Constant(1)]
+    assert len(constants) == 1
+    assert 9 in constants
 
 # 3sin(x) + 5sin(x) = 8sin(x)
 # TODO: Implement after creating unary node representation.

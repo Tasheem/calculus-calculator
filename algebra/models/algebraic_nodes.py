@@ -83,7 +83,16 @@ class BinaryOperation(Expression):
         return map
     
     def _find_like_terms_helper(self, expression: Expression, map: dict[Expression, list[int]], distribute_minus: bool) -> bool:
-        if isinstance(expression, Variable):
+        if isinstance(expression, Constant):
+            # Group all constants under the key "1".
+            # Treating them as if they have 1 as their like-term, for example 9 + 3 = 9*1 + 3*1
+            key = Constant(1)
+            value = int(-expression.value) if distribute_minus else int(expression.value)
+
+            self._add_to_map(map, key, value)
+
+            return True
+        elif isinstance(expression, Variable):
             value = -1 if distribute_minus else 1
             self._add_to_map(map, expression, value)
 
