@@ -71,7 +71,18 @@ class BinaryOperation(Expression):
     def simplify(self) -> Expression:
         raise RuntimeError("All subclasses of BinaryOperation should override the simplify() method.")
     
-    def _find_like_terms(self, expression: Expression, map: dict[Expression, list[int]], distribute_minus: bool):
+    def find_like_terms(self):
+        """
+        This function finds like terms in an expression returns the results in a map,
+        with the key being the non-coefficient portion of like terms and the value being a list of coefficients 
+        with matching non-coefficient expressions.
+        """
+        map: dict[Expression, list[int]] = {}
+        self._find_like_terms_helper(self, map, False)
+
+        return map
+    
+    def _find_like_terms_helper(self, expression: Expression, map: dict[Expression, list[int]], distribute_minus: bool) -> bool:
         if isinstance(expression, Variable):
             value = -1 if distribute_minus else 1
             self._add_to_map(map, expression, value)
@@ -102,8 +113,8 @@ class BinaryOperation(Expression):
             return False
         elif isinstance(expression, (Sum, Difference)):
             # Recurse left and right
-            left_is_valid = self._find_like_terms(expression.left_side, map, False)
-            right_is_valid = self._find_like_terms(expression.right_side, map, isinstance(expression, Difference))
+            left_is_valid = self._find_like_terms_helper(expression.left_side, map, False)
+            right_is_valid = self._find_like_terms_helper(expression.right_side, map, isinstance(expression, Difference))
 
             return left_is_valid and right_is_valid
         else:
@@ -125,13 +136,29 @@ class Sum(BinaryOperation):
         return Sum(self.left_side.copy(), self.right_side.copy())
     
     def simplify(self) -> Expression:
-        map: dict[Expression, list[int]] = {}
-        is_valid = self._find_like_terms(self, map, False)
+        map = self.find_like_terms()
         
-        if is_valid and len(map) > 0:
+        if len(map) > 0:
             return Constant(0)
         
         return Constant(0)
+    
+    def combine_fractions(self) -> Quotient | None:
+        """
+        If `self` contains quotients on its left and right sides and their denominators are the same, 
+        this method combines those quotients into one quotient and returns that `Quotient` representation.
+
+        Else, this method returns `None`.
+        """
+        if not isinstance(self.left_side, Quotient) or not isinstance(self.right_side, Quotient):
+            return None
+        
+        # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
+        if not self.left_side.denominator.__eq__(self.right_side.denominator):
+            return None
+        
+        combined_numerators = Sum(self.left_side.numerator.copy(), self.right_side.numerator.copy())
+        return Quotient(combined_numerators, self.left_side.denominator.copy())
 
 class Difference(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -139,6 +166,23 @@ class Difference(BinaryOperation):
 
     def copy(self):
         return Difference(self.left_side.copy(), self.right_side.copy())
+    
+    def combine_fractions(self) -> Quotient | None:
+        """
+        If `self` contains quotients on its left and right sides and their denominators are the same, 
+        this method combines those quotients into one quotient and returns that `Quotient` representation.
+
+        Else, this method returns `None`.
+        """
+        if not isinstance(self.left_side, Quotient) or not isinstance(self.right_side, Quotient):
+            return None
+        
+        # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
+        if not self.left_side.denominator.__eq__(self.right_side.denominator):
+            return None
+        
+        combined_numerators = Difference(self.left_side.numerator.copy(), self.right_side.numerator.copy())
+        return Quotient(combined_numerators, self.left_side.denominator.copy())
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:

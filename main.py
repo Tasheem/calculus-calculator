@@ -11,8 +11,7 @@ left_sum = Sum(two_deg, five_x)
 mid_sum = Sum(left_sum, seven_x)
 equation = Sum(mid_sum, nine)
 
-map: dict[Expression, list[int]] = {}
-res = equation._find_like_terms(equation, map, False)
+map = equation.find_like_terms()
 # print("map:", map)
 for key in map:
     print("Key:", key, end=" -> ")
