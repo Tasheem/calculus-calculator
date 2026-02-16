@@ -28,6 +28,9 @@ class Constant(Expression):
 
     def copy(self):
         return Constant(self.value)
+    
+    def additive_inverse(self):
+        return Constant(-self.value)
 
 class Variable(Expression):
     def __init__(self, name: str) -> None:

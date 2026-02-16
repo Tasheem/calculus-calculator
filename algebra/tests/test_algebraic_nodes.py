@@ -139,16 +139,16 @@ def test_find_like_terms_1():
 
     x_squared_coefficients = map[Power(Variable("x"), Constant(2))]
     assert len(x_squared_coefficients) == 1
-    assert x_squared_coefficients[0] == 2
+    assert isinstance(x_squared_coefficients[0], Constant) and x_squared_coefficients[0].value == 2
 
     x_coefficients = map[Variable("x")]
     assert len(x_coefficients) == 2
-    assert 5 in x_coefficients
-    assert 7 in x_coefficients
+    assert Constant(5) in x_coefficients
+    assert Constant(7) in x_coefficients
 
     constants = map[Constant(1)]
     assert len(constants) == 1
-    assert 9 in constants
+    assert Constant(9) in constants
 
 # 3sin(x) + 5sin(x) = 8sin(x)
 # TODO: Implement after creating unary node representation.
@@ -181,6 +181,40 @@ def test_find_like_terms_2():
     assert len(coefficients) == 2
     assert 3 in coefficients
     assert 7 in coefficients
+
+# 2x² + (1/2)x + (3/5)x + 9
+# Key: x² -> Value: [2]
+# Key: x -> Value: [(1/2), (3/5)]
+# Key: 1 -> Value: [9]
+def test_find_like_terms_3():
+    two_deg = Product(Constant(2), Power(Variable("x"), Constant(2)))
+    half_x = Product(Quotient(Constant(1), Constant(2)), Variable("x"))
+    three_fifth_x = Product(Quotient(Constant(3), Constant(5)), Variable("x"))
+    nine = Constant(9)
+
+    left_sum = Sum(two_deg, half_x)
+    mid_sum = Sum(left_sum, three_fifth_x)
+    equation = Sum(mid_sum, nine)
+
+    map = equation.find_like_terms()
+
+    assert len(map) == 3
+    assert "x²" in map
+    assert "x" in map
+    assert "1" in map
+
+    x_squared_coefficients = map[Power(Variable("x"), Constant(2))]
+    assert len(x_squared_coefficients) == 1
+    assert isinstance(x_squared_coefficients[0], Constant) and x_squared_coefficients[0].value == 2
+
+    x_coefficients = map[Variable("x")]
+    assert len(x_coefficients) == 2
+    assert Quotient(Constant(1), Constant(2)) in x_coefficients
+    assert Quotient(Constant(3), Constant(5)) in x_coefficients
+
+    constants = map[Constant(1)]
+    assert len(constants) == 1
+    assert Constant(9) in constants
 
 # (3x²)/y + (7x²)/y = (3x² + 7x²)/y
 def test_combine_fractions_1():

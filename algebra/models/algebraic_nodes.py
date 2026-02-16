@@ -77,37 +77,65 @@ class BinaryOperation(Expression):
         with the key being the non-coefficient portion of like terms and the value being a list of coefficients 
         with matching non-coefficient expressions.
         """
-        map: dict[Expression, list[int]] = {}
+        map: dict[Expression, list[Expression]] = {}
         self._find_like_terms_helper(self, map, False)
 
         return map
     
-    def _find_like_terms_helper(self, expression: Expression, map: dict[Expression, list[int]], distribute_minus: bool) -> bool:
+    def _find_like_terms_helper(self, expression: Expression, map: dict[Expression, list[Expression]], distribute_minus: bool) -> bool:
         if isinstance(expression, Constant):
             # Group all constants under the key "1".
             # Treating them as if they have 1 as their like-term, for example 9 + 3 = 9*1 + 3*1
             key = Constant(1)
-            value = int(-expression.value) if distribute_minus else int(expression.value)
+            value = Constant(-expression.value) if distribute_minus else Constant(expression.value)
 
             self._add_to_map(map, key, value)
 
             return True
         elif isinstance(expression, Variable):
-            value = -1 if distribute_minus else 1
+            value = Constant(-1) if distribute_minus else Constant(1)
             self._add_to_map(map, expression, value)
+
+            return True
+        elif isinstance(expression, Quotient) and isinstance(expression.numerator, Constant) and isinstance(expression.denominator, Constant):
+            # Group all fractions under the key "1", along with constants.
+            key = Constant(1)
+            value = Quotient(expression.numerator.additive_inverse(), expression.denominator.copy()) if distribute_minus else Quotient(expression.numerator.copy(), expression.denominator.copy())
+
+            self._add_to_map(map, key, value)
 
             return True
         elif isinstance(expression, Product):
             if isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Variable):
                 key = expression.right_side
                 value = int(expression.left_side.value)
-                self._add_to_map(map, key, -value if distribute_minus else value)
+                self._add_to_map(map, key, Constant(-value) if distribute_minus else Constant(value))
+
+                return True
+            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Variable):
+                quotient = expression.left_side
+                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
+                    return False
+
+                key = expression.right_side
+                value = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
+                self._add_to_map(map, key, value)
 
                 return True
             elif isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Power):
                 key = expression.right_side
                 value = int(expression.left_side.value)
-                self._add_to_map(map, key, -value if distribute_minus else value)
+                self._add_to_map(map, key, Constant(-value) if distribute_minus else Constant(value))
+
+                return True
+            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Power):
+                quotient = expression.left_side
+                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
+                    return False
+                
+                key = expression.right_side
+                value = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
+                self._add_to_map(map, key, value)
 
                 return True
             return False
@@ -116,7 +144,7 @@ class BinaryOperation(Expression):
             exponent = expression.exponent
 
             if isinstance(base, Variable) and isinstance(exponent, Constant):
-                self._add_to_map(map, expression, -1 if distribute_minus else 1)
+                self._add_to_map(map, expression, Constant(-1) if distribute_minus else Constant(1))
                 return True
             
             return False
@@ -130,7 +158,7 @@ class BinaryOperation(Expression):
             # Return False to indicate the root expression cannot be evaluated to combine like terms.
             return False
         
-    def _add_to_map(self, map: dict[Expression, list[int]], key: Expression, value: int):
+    def _add_to_map(self, map: dict[Expression, list[Expression]], key: Expression, value: Expression):
         if key in map:
             like_terms = map[key]
             like_terms.append(value)
