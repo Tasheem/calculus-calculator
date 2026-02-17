@@ -284,69 +284,213 @@ def test_combine_fractions_2():
 
 # 3x + 5x = 8x
 def test_combine_like_terms_1():
-    pass
+    left = Product(Constant(3), Variable("x"))
+    right = Product(Constant(5), Variable("x"))
+    equation = Sum(left, right)
+    
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == 8 and result.right_side.name == "x"
 
 # x + x = 2x
 def test_combine_like_terms_2():
-    pass
+    x = Variable("x")
+    equation = Sum(x, x.copy())
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == 2 and result.right_side.name == "x"
 
 # -3x + 5x = 2x
 def test_combine_like_terms_3():
-    pass
+    left = Product(Constant(-3), Variable("x"))
+    right = Product(Constant(5), Variable("x"))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == 2 and result.right_side.name == "x"
 
 # 3x - 5x = -2x
 def test_combine_like_terms_4():
-    pass
+    left = Product(Constant(3), Variable("x"))
+    right = Product(Constant(5), Variable("x"))
+    equation = Difference(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == -2 and result.right_side.name == "x"
 
 # 3x² + 5x
 # Cannot combine
 def test_combine_like_terms_5():
-    pass
+    left = Product(Constant(3), Power(Variable("x"), Constant(2)))
+    right = Product(Constant(5), Variable("x"))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert result is None
 
 # x³ + x²
 # Cannot combine
 def test_combine_like_terms_6():
-    pass
+    left = Power(Variable("x"), Constant(3))
+    right = Power(Variable("x"), Constant(2))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert result is None
 
 # x² + x² = 2x²
 def test_combine_like_terms_7():
-    pass
+    left = Power(Variable("x"), Constant(2))
+    right = Power(Variable("x"), Constant(2))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Power)
+    assert result.left_side.value == 2
+    power = result.right_side
+    assert isinstance(power.base, Variable) and isinstance(power.exponent, Constant)
+    assert power.base.name == "x" and power.exponent.value == 2
 
 # 3x² + 5x + 2x² + 7x = 5x² + 12x
 def test_combine_like_terms_8():
-    pass
+    equation = Sum(
+        Product(Constant(3), Power(Variable("x"), Constant(2))),
+        Sum(
+            Product(Constant(5), Variable("x")),
+            Sum(
+                Product(Constant(2), Power(Variable("x"), Constant(2))),
+                Product(Constant(7), Variable("x")),
+            )
+        )
+    )
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Sum)
+    assert isinstance(result.left_side, Product) and isinstance(result.right_side, Product)
+
+    five_x_squared = result.left_side
+    assert isinstance(five_x_squared.left_side, Constant) and isinstance(five_x_squared.right_side, Power)
+    x_squared = five_x_squared.right_side
+    assert isinstance(x_squared.base, Variable) and isinstance(x_squared.exponent, Constant)
+    assert five_x_squared.left_side.value == 5 and x_squared.base.name == "x" and x_squared.exponent.value == 2
+    
+    twelve_x = result.right_side
+    assert isinstance(twelve_x.left_side, Constant) and isinstance(twelve_x.right_side, Variable)
+    assert twelve_x.left_side.value == 12 and twelve_x.right_side.name == "x"
 
 # x³ + 2x² + 3x³ + x² = 4x³ + 3x²
 def test_combine_like_terms_9():
-    pass
+    equation = Sum(
+        Power(Variable("x"), Constant(3)),
+        Sum(
+            Product(Constant(2), Power(Variable("x"), Constant(2))),
+            Sum(
+                Product(Constant(3), Power(Variable("x"), Constant(3))),
+                Power(Variable("x"), Constant(2))
+            )
+        )
+    )
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Sum)
+    assert isinstance(result.left_side, Product) and isinstance(result.right_side, Product)
+
+    four_x_cubed = result.left_side
+    assert isinstance(four_x_cubed.left_side, Constant) and isinstance(four_x_cubed.right_side, Power)
+    x_cubed = four_x_cubed.right_side
+    assert isinstance(x_cubed.base, Variable) and isinstance(x_cubed.exponent, Constant)
+    assert four_x_cubed.left_side.value == 4 and x_cubed.base.name == "x" and x_cubed.exponent.value == 3
+    
+    three_x_squared = result.right_side
+    assert isinstance(three_x_squared.left_side, Constant) and isinstance(three_x_squared.right_side, Power)
+    x_squared = three_x_squared.right_side
+    assert isinstance(x_squared.base, Variable) and isinstance(x_squared.exponent, Constant)
+    assert three_x_squared.left_side.value == 3 and x_squared.base.name == "x" and x_squared.exponent.value == 2
 
 # (1/2)x + (1/2)x = x
 def test_combine_like_terms_10():
-    pass
+    left = Product(Quotient(Constant(1), Constant(2)), Variable("x"))
+    right = Product(Quotient(Constant(1), Constant(2)), Variable("x"))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Variable)
+    assert result.name == "x"
 
 # (1/2)x + (1/3)x = (5/6)x
 def test_combine_like_terms_11():
-    pass
+    left = Product(Quotient(Constant(1), Constant(2)), Variable("x"))
+    right = Product(Quotient(Constant(1), Constant(3)), Variable("x"))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Quotient) and isinstance(result.right_side, Variable)
+    assert isinstance(result.left_side.numerator, Constant) and isinstance(result.left_side.denominator, Constant)
+    assert result.left_side.numerator.value == 5 and result.left_side.denominator.value == 6 and result.right_side.name == "x"
 
 # 2x + (1/2)x = (5/2)x
 def test_combine_like_terms_12():
-    pass
+    left = Product(Constant(2), Variable("x"))
+    right = Product(Quotient(Constant(1), Constant(2)), Variable("x"))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Quotient) and isinstance(result.right_side, Variable)
+    q = result.left_side
+    assert isinstance(q.numerator, Constant) and isinstance(q.denominator, Constant)
+    assert q.numerator.value == 5 and q.denominator.value == 2 and result.right_side.name == "x"
 
 # -3x - 5x = -8x
 def test_combine_like_terms_13():
-    pass
+    left = Product(Constant(-3), Variable("x"))
+    right = Product(Constant(5), Variable("x"))
+    equation = Difference(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == -8 and result.right_side.name == "x"
 
 # 5x - 3x = 2x
 def test_combine_like_terms_14():
-    pass
+    left = Product(Constant(5), Variable("x"))
+    right = Product(Constant(3), Variable("x"))
+    equation = Difference(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Product)
+    assert isinstance(result.left_side, Constant) and isinstance(result.right_side, Variable)
+    assert result.left_side.value == 2 and result.right_side.name == "x"
 
 # 3x - 3x = 0
 def test_combine_like_terms_15():
-    pass
+    left = Product(Constant(3), Variable("x"))
+    right = Product(Constant(3), Variable("x"))
+    equation = Difference(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Constant)
+    assert result.value == 0
 
 # 5x² - 5x² = 0
 def test_combine_like_terms_16():
-    pass
+    left = Product(Constant(5), Power(Variable("x"), Constant(2)))
+    right = Product(Constant(5), Power(Variable("x"), Constant(2)))
+    equation = Difference(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Constant)
+    assert result.value == 0
 
 # Adding fractions can reveal like terms that weren't obvious before:
 # x/2 + x/3
@@ -354,4 +498,12 @@ def test_combine_like_terms_16():
 # = (3x + 2x)/6     # Add fractions
 # = 5x/6            # Combine like terms in numerator
 def test_combine_like_terms_17():
-    pass
+    left = Quotient(Variable("x"), Constant(2))
+    right = Quotient(Variable("x"), Constant(3))
+    equation = Sum(left, right)
+
+    result = equation.combine_like_terms()
+    assert isinstance(result, Quotient)
+    assert isinstance(result.numerator, Product) and isinstance(result.denominator, Constant)
+    assert isinstance(result.numerator.left_side, Constant) and isinstance(result.numerator.right_side, Variable)
+    assert result.numerator.left_side.value == 5 and result.numerator.right_side.name == "x" and result.denominator.value == 6
