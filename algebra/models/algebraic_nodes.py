@@ -185,6 +185,7 @@ class AdditiveOperations(BinaryOperation):
             for current_coefficient in like_terms:
                 if isinstance(final_coefficient, Constant) and final_coefficient.value == 0 and isinstance(current_coefficient, (Constant, Quotient)):
                     final_coefficient = current_coefficient.copy()
+                    continue
 
                 if not isinstance(current_coefficient, (Constant, Quotient)):
                     # Should never hit this case since we should only have coefficients that are constants or quotients.
