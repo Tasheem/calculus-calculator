@@ -347,3 +347,11 @@ def test_combine_like_terms_15():
 # 5x² - 5x² = 0
 def test_combine_like_terms_16():
     pass
+
+# Adding fractions can reveal like terms that weren't obvious before:
+# x/2 + x/3
+# = 3x/6 + 2x/6    # Find common denominator
+# = (3x + 2x)/6     # Add fractions
+# = 5x/6            # Combine like terms in numerator
+def test_combine_like_terms_17():
+    pass

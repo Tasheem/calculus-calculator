@@ -174,6 +174,8 @@ class AdditiveOperations(BinaryOperation):
         # Find like terms
         map = self.find_like_terms()
 
+        # TODO: Combine fractions before combining like terms
+
         # Add like terms & put them in a final array.
         combined_terms: list[Constant | Product | Quotient] = []
         for key in map:
