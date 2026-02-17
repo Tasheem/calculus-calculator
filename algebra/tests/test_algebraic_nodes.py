@@ -281,3 +281,69 @@ def test_combine_fractions_2():
     assert right_numer.left_side == 7
     assert isinstance(right_numer.right_side.base, Variable) and isinstance(right_numer.right_side.exponent, Constant)
     assert right_numer.right_side.base.name == "x" and right_numer.right_side.exponent.value == 2
+
+# 3x + 5x = 8x
+def test_combine_like_terms_1():
+    pass
+
+# x + x = 2x
+def test_combine_like_terms_2():
+    pass
+
+# -3x + 5x = 2x
+def test_combine_like_terms_3():
+    pass
+
+# 3x - 5x = -2x
+def test_combine_like_terms_4():
+    pass
+
+# 3x² + 5x
+# Cannot combine
+def test_combine_like_terms_5():
+    pass
+
+# x³ + x²
+# Cannot combine
+def test_combine_like_terms_6():
+    pass
+
+# x² + x² = 2x²
+def test_combine_like_terms_7():
+    pass
+
+# 3x² + 5x + 2x² + 7x = 5x² + 12x
+def test_combine_like_terms_8():
+    pass
+
+# x³ + 2x² + 3x³ + x² = 4x³ + 3x²
+def test_combine_like_terms_9():
+    pass
+
+# (1/2)x + (1/2)x = x
+def test_combine_like_terms_10():
+    pass
+
+# (1/2)x + (1/3)x = (5/6)x
+def test_combine_like_terms_11():
+    pass
+
+# 2x + (1/2)x = (5/2)x
+def test_combine_like_terms_12():
+    pass
+
+# -3x - 5x = -8x
+def test_combine_like_terms_13():
+    pass
+
+# 5x - 3x = 2x
+def test_combine_like_terms_14():
+    pass
+
+# 3x - 3x = 0
+def test_combine_like_terms_15():
+    pass
+
+# 5x² - 5x² = 0
+def test_combine_like_terms_16():
+    pass
