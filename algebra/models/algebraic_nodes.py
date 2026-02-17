@@ -228,7 +228,7 @@ class AdditiveOperations(BinaryOperation):
         
         # [2x², 13x, 9]
         def rebuild(parent: Sum | Difference, terms: list[Constant | Product | Quotient], curr: int):
-            if next == len(combined_terms):
+            if curr == len(combined_terms):
                 return
             
             curr_expression = terms[curr]
