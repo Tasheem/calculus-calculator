@@ -215,7 +215,7 @@ class AdditiveOperation(BinaryOperation):
         # TODO: Combine fractions before combining like terms
 
         # Add like terms & put them in a final array.
-        combined_terms: list[Constant | Product | Quotient] = []
+        combined_terms: list[Expression] = []
         for key in map:
             like_terms = map[key]
             
@@ -256,10 +256,13 @@ class AdditiveOperation(BinaryOperation):
                 continue
 
             # Add the non-coefficient part back.
-            final_term = final_coefficient if isinstance(key, Constant) else Product(final_coefficient, key.copy())
-
-            # Add the combined like terms to the combined_terms list.
-            combined_terms.append(final_term)
+            if isinstance(key, Constant):
+                combined_terms.append(final_coefficient)
+            else:
+                if isinstance(final_coefficient, Constant) and final_coefficient.value == 1:
+                    combined_terms.append(key.copy())
+                else:
+                    combined_terms.append(Product(final_coefficient, key.copy()))
 
         # Rebuild expression tree
         if len(combined_terms) == 0:
@@ -269,7 +272,7 @@ class AdditiveOperation(BinaryOperation):
             return combined_terms[0]
         
         # [2x², 13x, 9]
-        def rebuild(parent: Sum | Difference | Product | Quotient | Constant, terms: list[Constant | Product | Quotient], curr: int):
+        def rebuild(parent: Expression, terms: list[Expression], curr: int):
             if curr == len(combined_terms):
                 return
             
@@ -295,7 +298,7 @@ class AdditiveOperation(BinaryOperation):
             # TODO: Implement the recursive case here.
             rebuild(curr_expression, terms, curr + 1)
 
-        def is_negative(expression: Constant | Product | Quotient) -> tuple[bool, Constant | Product | Quotient]:
+        def is_negative(expression: Expression) -> tuple[bool, Expression]:
             if isinstance(expression, Constant):
                 return (True, expression.additive_inverse()) if expression.value < 0 else (False, expression)
             elif isinstance(expression, Product):
@@ -308,7 +311,7 @@ class AdditiveOperation(BinaryOperation):
                     return (True, copy)
                 else:
                     return (False, expression)
-            else:
+            elif isinstance(expression, Quotient):
                 # Consider the expression negative if its coefficient is negative.
                 if isinstance(expression.numerator, Constant) and expression.numerator.value < 0:
                     copy = expression.copy()
@@ -319,6 +322,8 @@ class AdditiveOperation(BinaryOperation):
                     return (True, copy)
                 else:
                     return (False, expression)
+            else:
+                return (False, expression)
                 
         is_neg, second_term = is_negative(combined_terms[1])
         root = Difference(combined_terms[0], second_term) if is_neg else Sum(combined_terms[0], second_term)
@@ -400,9 +405,13 @@ class Quotient(BinaryOperation):
         return Quotient(self.left_side.copy(), self.right_side.copy())
     
     # 8/10 = 4 / 5
-    def simplify(self) -> Quotient:
+    def simplify(self) -> Constant | Quotient:
         if not isinstance(self.numerator, Constant) or not isinstance(self.denominator, Constant):
             return self.copy()
+        
+        # Divide the top and bottom if the bottom divides evenly into the top.
+        if self.numerator.value % self.denominator.value == 0:
+            return Constant(self.numerator.value / self.denominator.value)
         
         greatest_common_factor = 1
         upper_bound = min(int(self.numerator.value), int(self.denominator.value))
@@ -415,7 +424,7 @@ class Quotient(BinaryOperation):
         return Quotient(new_numerator, new_denominator)
     
     # 3/5 + 2/10 = 6/10 + 2/10 = 8/10 = 4 / 5
-    def add(self, q2: Quotient) -> Quotient | None:
+    def add(self, q2: Quotient) -> Constant | Quotient | None:
         # If the fractions don't add nicely with constants as their denominator,
         # then we just make an immediate exit.
         if not isinstance(self.denominator, Constant) or not isinstance(q2.denominator, Constant):
@@ -438,7 +447,7 @@ class Quotient(BinaryOperation):
 
         if isinstance(q1_numerator, Constant) and isinstance(q2_numerator, Constant):
             numerators_summed = Constant(q1_numerator.value + q2_numerator.value)
-            return Quotient(numerators_summed, Constant(lcd))
+            return Quotient(numerators_summed, Constant(lcd)).simplify()
         
         numerators_summed = Sum(q1_numerator, q2_numerator)
         return Quotient(numerators_summed, Constant(lcd))
