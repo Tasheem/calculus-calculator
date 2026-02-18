@@ -1,5 +1,4 @@
 from algebra.models.atomic_nodes import *
-from algebra.models.atomic_nodes import Expression
 from utils.string_utils import *
 
 class BinaryOperation(Expression):
@@ -19,12 +18,14 @@ class BinaryOperation(Expression):
         
         if isinstance(expression, BinaryOperation):
             equation_body = ""
-            if expression.operation == "^":
+            if isinstance(expression, Power):
                 equation_body = f"{self._stringify(expression.left_side, expression)}{superscript(int(expression.right_side.value)) if isinstance(expression.right_side, Constant) else "^" + self._stringify(expression.right_side, expression)}"
+            elif isinstance(expression, Product) and isinstance(expression.right_side, (Power, Variable)):
+                equation_body = f"{self._stringify(expression.left_side, expression)}{self._stringify(expression.right_side, expression)}"
             else:
                 equation_body = f"{self._stringify(expression.left_side, expression)} {expression.operation} {self._stringify(expression.right_side, expression)}"
             
-            if parent is None or isinstance(expression, Power):
+            if parent is None or isinstance(expression, Power) or (isinstance(expression, Product) and isinstance(expression.right_side, (Power, Variable))):
                 return equation_body
             else:
                 return f"({equation_body})"
@@ -72,6 +73,102 @@ class BinaryOperation(Expression):
     def simplify(self) -> Expression:
         raise RuntimeError("All subclasses of BinaryOperation should override the simplify() method.")
     
+    def extract_coefficient(self, expression: Expression, distribute_minus: bool) -> tuple[Constant | Quotient | None, Constant | Variable | Power | None]:
+        """
+        This method takes an `Expression` and returns a tuple containing that expression's coefficient
+        and variable_part in the form of (coefficient, variable_part).
+
+        If a coefficient-variable pair cannot be found, this method returns `(None, None)`.
+        """
+        if isinstance(expression, Constant):
+            # Group all constants under the key "1".
+            # Treating them as if they have 1 as their like-term, for example 9 + 3 = 9*1 + 3*1
+            coefficient = Constant(-expression.value) if distribute_minus else Constant(expression.value)
+            variable_part = Constant(1)
+
+            return (coefficient, variable_part)
+        elif isinstance(expression, Variable):
+            coefficient = Constant(-1) if distribute_minus else Constant(1)
+            return (coefficient, expression)
+        elif isinstance(expression, Quotient) and isinstance(expression.numerator, Constant) and isinstance(expression.denominator, Constant):
+            # Group all fractions under the key "1", along with constants.
+            coefficient = Quotient(expression.numerator.additive_inverse(), expression.denominator.copy()) if distribute_minus else Quotient(expression.numerator.copy(), expression.denominator.copy())
+            variable_part = Constant(1)
+
+            return (coefficient, variable_part)
+        elif isinstance(expression, Product):
+            if isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Variable):
+                coefficient = Constant(-int(expression.left_side.value)) if distribute_minus else Constant(int(expression.left_side.value))
+                variable_part = expression.right_side
+
+                return (coefficient, variable_part)
+            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Variable):
+                quotient = expression.left_side
+                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
+                    return (None, None)
+
+                coefficient = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
+                variable_part = expression.right_side
+
+                return (coefficient, variable_part)
+            elif isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Power):
+                coefficient = Constant(-int(expression.left_side.value)) if distribute_minus else Constant(int(expression.left_side.value))
+                variable_part = expression.right_side
+
+                return (coefficient, variable_part)
+            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Power):
+                quotient = expression.left_side
+                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
+                    return (None, None)
+                
+                coefficient = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
+                variable_part = expression.right_side
+
+                return (coefficient, variable_part)
+            else:
+                return (None, None)
+        elif isinstance(expression, Power):
+            base = expression.base
+            exponent = expression.exponent
+
+            if isinstance(base, Variable) and isinstance(exponent, Constant):
+                return (Constant(-1) if distribute_minus else Constant(1), expression)
+            
+            return (None, None)
+        else:
+            # Return False to indicate the root expression cannot be evaluated to combine like terms.
+            return (None, None)
+    
+    def has_like_terms(self):
+        """
+        This method traverses the expression tree, reaches all leaf nodes and returns
+        true if any of the leaf nodes share a common variable part or like-term.
+        """
+        return self._has_like_terms_helper(self, set())
+
+    def _has_like_terms_helper(self, expression: Expression | None, seen: set[Expression]) -> bool:
+        if expression is None:
+            return False
+        
+        _, variable_part = self.extract_coefficient(expression, False)
+        if variable_part is None:
+            return False
+        
+        # If more than one term with the same non-coefficient has been found, 
+        # we can conclude that like terms exist.
+        if variable_part in seen:
+            return True
+        seen.add(variable_part)
+
+        # Recurse
+        if not isinstance(expression, BinaryOperation):
+            return False
+        
+        left_has_like_terms = self._has_like_terms_helper(expression.left_side, seen)
+        right_has_like_terms = self._has_like_terms_helper(expression.right_side, seen)
+        return left_has_like_terms or right_has_like_terms
+
+    
     def find_like_terms(self):
         """
         This function finds like terms in an expression returns the results in a map,
@@ -84,80 +181,19 @@ class BinaryOperation(Expression):
         return map
     
     def _find_like_terms_helper(self, expression: Expression, map: dict[Expression, list[Constant | Quotient]], distribute_minus: bool) -> bool:
-        if isinstance(expression, Constant):
-            # Group all constants under the key "1".
-            # Treating them as if they have 1 as their like-term, for example 9 + 3 = 9*1 + 3*1
-            key = Constant(1)
-            value = Constant(-expression.value) if distribute_minus else Constant(expression.value)
-
-            self._add_to_map(map, key, value)
-
-            return True
-        elif isinstance(expression, Variable):
-            value = Constant(-1) if distribute_minus else Constant(1)
-            self._add_to_map(map, expression, value)
-
-            return True
-        elif isinstance(expression, Quotient) and isinstance(expression.numerator, Constant) and isinstance(expression.denominator, Constant):
-            # Group all fractions under the key "1", along with constants.
-            key = Constant(1)
-            value = Quotient(expression.numerator.additive_inverse(), expression.denominator.copy()) if distribute_minus else Quotient(expression.numerator.copy(), expression.denominator.copy())
-
-            self._add_to_map(map, key, value)
-
-            return True
-        elif isinstance(expression, Product):
-            if isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Variable):
-                key = expression.right_side
-                value = int(expression.left_side.value)
-                self._add_to_map(map, key, Constant(-value) if distribute_minus else Constant(value))
-
-                return True
-            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Variable):
-                quotient = expression.left_side
-                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
-                    return False
-
-                key = expression.right_side
-                value = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
-                self._add_to_map(map, key, value)
-
-                return True
-            elif isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Power):
-                key = expression.right_side
-                value = int(expression.left_side.value)
-                self._add_to_map(map, key, Constant(-value) if distribute_minus else Constant(value))
-
-                return True
-            elif isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Power):
-                quotient = expression.left_side
-                if not isinstance(quotient.numerator, Constant) or not isinstance(quotient.denominator, Constant):
-                    return False
-                
-                key = expression.right_side
-                value = Quotient(quotient.numerator.additive_inverse(), quotient.denominator.copy()) if distribute_minus else Quotient(quotient.numerator.copy(), quotient.denominator.copy())
-                self._add_to_map(map, key, value)
-
-                return True
-            return False
-        elif isinstance(expression, Power):
-            base = expression.base
-            exponent = expression.exponent
-
-            if isinstance(base, Variable) and isinstance(exponent, Constant):
-                self._add_to_map(map, expression, Constant(-1) if distribute_minus else Constant(1))
-                return True
-            
-            return False
-        elif isinstance(expression, (Sum, Difference)):
+        if isinstance(expression, (Sum, Difference)):
             # Recurse left and right
             left_is_valid = self._find_like_terms_helper(expression.left_side, map, False)
             right_is_valid = self._find_like_terms_helper(expression.right_side, map, isinstance(expression, Difference))
 
             return left_is_valid and right_is_valid
         else:
-            # Return False to indicate the root expression cannot be evaluated to combine like terms.
-            return False
+            coefficient, variable_part = self.extract_coefficient(expression, distribute_minus)
+            if coefficient is None or variable_part is None:
+                return False
+
+            self._add_to_map(map, variable_part, coefficient)
+            return True
         
     def _add_to_map(self, map: dict[Expression, list[Constant | Quotient]], key: Expression, value: Constant | Quotient):
         if key in map:
@@ -166,7 +202,7 @@ class BinaryOperation(Expression):
         else:
             map[key] = [value]
 
-class AdditiveOperations(BinaryOperation):
+class AdditiveOperation(BinaryOperation):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
         super().__init__(left_side, operation, right_side)
 
@@ -227,20 +263,31 @@ class AdditiveOperations(BinaryOperation):
             return combined_terms[0]
         
         # [2x², 13x, 9]
-        def rebuild(parent: Sum | Difference, terms: list[Constant | Product | Quotient], curr: int):
+        def rebuild(parent: Sum | Difference | Product | Quotient | Constant, terms: list[Constant | Product | Quotient], curr: int):
             if curr == len(combined_terms):
                 return
             
             curr_expression = terms[curr]
-            # Determine if the next expression has a negative.
-            # If so, undo the distribution of the negative and create a Difference node.
-            is_neg, updated_expression = is_negative(curr_expression)
-            if is_neg:
-                parent.right_side = Difference(parent.right_side, updated_expression)
+            if isinstance(parent, (Sum, Difference)):
+                # Determine if the next expression has a negative.
+                # If so, undo the distribution of the negative and create a Difference node.
+                is_neg, updated_expression = is_negative(curr_expression)
+                if is_neg:
+                    parent.right_side = Difference(parent.right_side, updated_expression)
 
-            # Build the expression from left to right. Replace the right side with a new sum node
-            # where the left side of that sum node is the old right side of the parent.
-            parent.right_side = Sum(parent.right_side, curr_expression)
+                # Build the expression from left to right. Replace the right side with a new sum node
+                # where the left side of that sum node is the old right side of the parent.
+                parent.right_side = Sum(parent.right_side, curr_expression)
+            elif isinstance(parent, (Product, Quotient)):
+                parent.right_side = curr_expression
+                if isinstance(parent, Quotient):
+                    parent.denominator = parent.right_side
+            else:
+                # Need to figure out what to do with leaf nodes like constants.
+                pass
+
+            # TODO: Implement the recursive case here.
+            rebuild(curr_expression, terms, curr + 1)
 
         def is_negative(expression: Constant | Product | Quotient) -> tuple[bool, Constant | Product | Quotient]:
             if isinstance(expression, Constant):
@@ -273,7 +320,7 @@ class AdditiveOperations(BinaryOperation):
 
         return root
         
-class Sum(AdditiveOperations):
+class Sum(AdditiveOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "+", right_side)
 
@@ -305,7 +352,7 @@ class Sum(AdditiveOperations):
         combined_numerators = Sum(self.left_side.numerator.copy(), self.right_side.numerator.copy())
         return Quotient(combined_numerators, self.left_side.denominator.copy())
 
-class Difference(AdditiveOperations):
+class Difference(AdditiveOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
         super().__init__(left_side, "-", right_side)
 
