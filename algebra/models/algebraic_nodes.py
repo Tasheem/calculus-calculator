@@ -251,6 +251,10 @@ class AdditiveOperation(BinaryOperation):
                         
                         final_coefficient = added_frac
 
+            # Not adding it to the list if the coefficient is zero.
+            if isinstance(final_coefficient, Constant) and final_coefficient.value == 0:
+                continue
+
             # Add the non-coefficient part back.
             final_term = final_coefficient if isinstance(key, Constant) else Product(final_coefficient, key.copy())
 
@@ -259,7 +263,7 @@ class AdditiveOperation(BinaryOperation):
 
         # Rebuild expression tree
         if len(combined_terms) == 0:
-            return None
+            return Constant(0)
         
         if len(combined_terms) == 1:
             return combined_terms[0]
