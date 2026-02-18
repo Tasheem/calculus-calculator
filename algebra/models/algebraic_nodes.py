@@ -154,7 +154,7 @@ class AdditiveOperation(BinaryOperation):
         if expression is None:
             return False
         
-        if not isinstance(expression, BinaryOperation): 
+        if not isinstance(expression, (Sum, Difference)): 
             _, variable_part = self.extract_coefficient(expression, False)
             if variable_part is None:
                 return False
@@ -167,7 +167,6 @@ class AdditiveOperation(BinaryOperation):
 
             return False
 
-        # Recurse
         left_has_like_terms = self._has_like_terms_helper(expression.left_side, seen)
         right_has_like_terms = self._has_like_terms_helper(expression.right_side, seen)
         return left_has_like_terms or right_has_like_terms
