@@ -72,7 +72,11 @@ class BinaryOperation(Expression):
     
     def simplify(self) -> Expression:
         raise RuntimeError("All subclasses of BinaryOperation should override the simplify() method.")
-    
+
+class AdditiveOperation(BinaryOperation):
+    def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
+        super().__init__(left_side, operation, right_side)
+
     def extract_coefficient(self, expression: Expression, distribute_minus: bool) -> tuple[Constant | Quotient | None, Constant | Variable | Power | None]:
         """
         This method takes an `Expression` and returns a tuple containing that expression's coefficient
@@ -201,10 +205,6 @@ class BinaryOperation(Expression):
             like_terms.append(value)
         else:
             map[key] = [value]
-
-class AdditiveOperation(BinaryOperation):
-    def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
-        super().__init__(left_side, operation, right_side)
 
     def combine_like_terms(self):
         # Find like terms
