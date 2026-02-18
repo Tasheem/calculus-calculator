@@ -154,20 +154,20 @@ class AdditiveOperation(BinaryOperation):
         if expression is None:
             return False
         
-        _, variable_part = self.extract_coefficient(expression, False)
-        if variable_part is None:
+        if not isinstance(expression, BinaryOperation): 
+            _, variable_part = self.extract_coefficient(expression, False)
+            if variable_part is None:
+                return False
+            
+            # If more than one term with the same non-coefficient has been found, 
+            # we can conclude that like terms exist.
+            if variable_part in seen:
+                return True
+            seen.add(variable_part)
+
             return False
-        
-        # If more than one term with the same non-coefficient has been found, 
-        # we can conclude that like terms exist.
-        if variable_part in seen:
-            return True
-        seen.add(variable_part)
 
         # Recurse
-        if not isinstance(expression, BinaryOperation):
-            return False
-        
         left_has_like_terms = self._has_like_terms_helper(expression.left_side, seen)
         right_has_like_terms = self._has_like_terms_helper(expression.right_side, seen)
         return left_has_like_terms or right_has_like_terms
@@ -207,6 +207,9 @@ class AdditiveOperation(BinaryOperation):
             map[key] = [value]
 
     def combine_like_terms(self):
+        if not self.has_like_terms():
+            return None
+
         # Find like terms
         map = self.find_like_terms()
 
