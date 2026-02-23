@@ -1,5 +1,6 @@
 from algebra.models.atomic_nodes import *
 from utils.string_utils import *
+from collections import defaultdict
 
 class BinaryOperation(Expression):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
@@ -101,11 +102,18 @@ class BinaryOperation(Expression):
                 return Product(Constant(-1), expression.copy())
         
         if not isinstance(expression, Difference):
-            # Recurse to find Difference nodes
-            expression.left_side = self._distribute_negatives(expression.left_side, distribute)
-            expression.right_side = self._distribute_negatives(expression.right_side, distribute)
+            # 2/3 should be transformed to (-2)/3
+            if isinstance(expression, Quotient) and distribute:
+                if isinstance(expression.numerator, Constant):
+                    return Quotient(Constant(-expression.numerator.value), expression.denominator.copy())
+                else:
+                    return Quotient(Product(Constant(-1), expression.numerator), expression.denominator.copy())
+            else:
+                # Recurse to find Difference nodes
+                expression.left_side = self._distribute_negatives(expression.left_side, distribute)
+                expression.right_side = self._distribute_negatives(expression.right_side, distribute)
 
-            return expression
+                return expression
         
         return Sum(expression.left_side.copy(), self._distribute_negatives(expression.right_side, True))
     
@@ -146,6 +154,74 @@ class BinaryOperation(Expression):
             expression.right_side = self._simplify_powers(expression.right_side)
 
             return expression
+        
+    def only_contains_additive(self):
+        return self._only_contains_additive(self)
+        
+    def _only_contains_additive(self, expression: Expression):
+        # Use leaf nodes as a base case.
+        if isinstance(expression, (Constant, Variable)):
+            return True
+        
+        if isinstance(expression, AdditiveOperation):
+            return self._only_contains_additive(expression.left_side) and self._only_contains_additive(expression.right_side)
+        
+        return False
+    
+    def _extract_fraction_groups(self):
+        return self._extract_fraction_groups_helper(self, defaultdict(list[Expression]))
+    
+    def _extract_fraction_groups_helper(self, expression: Expression, groups: defaultdict[Expression, list[Expression]]):
+        """
+        This method populates the `groups` dictionary with all the matching value.
+        
+        :param expression: Any node in an expression tree.
+        :param groups: A map containing the unique donominators as keys, and the matching list of numerators as the value
+        """
+        if isinstance(expression, Quotient):
+            group = groups[expression.denominator]
+            group.append(expression.numerator)
+        elif isinstance(expression, (Sum, Difference)):
+            self._extract_fraction_groups_helper(expression.left_side, groups)
+            self._extract_fraction_groups_helper(expression.right_side, groups)
+
+        return groups
+        
+    def combine_fractions(self):
+        # Combine fractions if the expressions contains only Binary Expressions that are sums and differences.
+        # If it contains anything else, it'll be hard to flatten the tree and add/subtract across different regions.
+        if not self.only_contains_additive():
+            return self.copy()
+
+        return self._combine_fractions(self)
+    
+    # TODO: Finish implementing this.
+    def _combine_fractions(self, expression: BinaryOperation):
+        frac_groups = expression._extract_fraction_groups()
+        keys = list(frac_groups.keys())
+        
+        root = Sum(Constant(0), Constant(0))
+        # Note: The keys of the dict are the denominators the values in the list have in common.
+        for i in range(len(keys)):
+            denominator = keys[i]
+            numerators = frac_groups[denominator]
+            if len(numerators) == 0:
+                continue
+
+            if len(numerators) == 1:
+                foo = Quotient(numerators[0], denominator.copy())
+                continue
+            
+            if len(numerators) == 2:
+                continue 
+
+            numerator_root = Sum(Constant(0), Constant(0))
+            prev = None
+            curr = None
+            j = 2
+            # Build the expression tree up from left to right.
+            while j < len(numerators):
+                pass
         
     def _extract_power_components(self, expression: Product | Power | Variable) -> tuple[int, str, int] | None:
         """
