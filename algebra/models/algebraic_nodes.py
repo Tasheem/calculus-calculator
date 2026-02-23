@@ -71,7 +71,110 @@ class BinaryOperation(Expression):
         return expression.copy()
     
     def simplify(self) -> Expression:
-        raise RuntimeError("All subclasses of BinaryOperation should override the simplify() method.")
+        # Distribute negatives from difference nodes.
+        curr_tree = self.distribute_negatives()
+        if isinstance(curr_tree, Constant):
+            return curr_tree
+
+        # Simplify powers
+        curr_tree = curr_tree.simplify_powers()
+
+        # Combine fractions with same denominators
+
+        # Simplify complex fractions
+
+        # Maybe factor if it is a polynomial? 
+        # May need to factor the numerator and denominator if the root of the expression tree is a Quotient at this point.
+
+        # Combine like terms
+
+        return Constant(0)
+    
+    def distribute_negatives(self):
+        return self._distribute_negatives(self, False)
+
+    def _distribute_negatives(self, expression: Expression, distribute: bool):
+        if not isinstance(expression, BinaryOperation):
+            if isinstance(expression, Constant):
+                return expression.additive_inverse()
+            else: # return -x
+                return Product(Constant(-1), expression.copy())
+        
+        if not isinstance(expression, Difference):
+            # Recurse to find Difference nodes
+            expression.left_side = self._distribute_negatives(expression.left_side, distribute)
+            expression.right_side = self._distribute_negatives(expression.right_side, distribute)
+
+            return expression
+        
+        return Sum(expression.left_side.copy(), self._distribute_negatives(expression.right_side, True))
+    
+    def simplify_powers(self):
+        return self._simplify_powers(self)
+
+    def _simplify_powers(self, expression: Expression):
+        if not isinstance(expression, BinaryOperation):
+            return expression.copy()
+        
+        if not isinstance(expression, Product):
+            expression.left_side = self._simplify_powers(expression.left_side)
+            expression.right_side = self._simplify_powers(expression.right_side)
+
+            return expression
+        
+        # Multiply the coefficients and add the exponents
+        if isinstance(expression.left_side, (Product, Power, Variable)) and isinstance(expression.right_side, (Product, Power, Variable)):
+            left_components = self._extract_power_components(expression.left_side)
+            right_components = self._extract_power_components(expression.right_side)
+            if left_components is None or right_components is None:
+                return expression.copy()
+
+            left_coefficient, left_variable, left_exponent = left_components
+            right_coefficient, right_variable, right_exponent = right_components
+
+            if left_variable != right_variable:
+                return expression.copy()
+            
+            coefficient = Constant(left_coefficient * right_coefficient)
+            power_portion = Power(Variable(left_variable), Constant(left_exponent + right_exponent))
+            if coefficient.value == 1:
+                return Power(Variable(left_variable), Constant(left_exponent + right_exponent))
+            else:
+                return Product(coefficient, power_portion)
+        else:
+            expression.left_side = self._simplify_powers(expression.left_side)
+            expression.right_side = self._simplify_powers(expression.right_side)
+
+            return expression
+        
+    def _extract_power_components(self, expression: Product | Power | Variable) -> tuple[int, str, int] | None:
+        """
+        Returns a tuple in the form (coefficient, variable_name, exponent)
+        """
+        if isinstance(expression, Variable):
+            return (1, expression.name, 1)
+        elif isinstance(expression, Power):
+            if isinstance(expression.base, Variable) and isinstance(expression.exponent, Constant):
+                return (1, expression.base.name, int(expression.exponent.value))
+        elif isinstance(expression, Product):
+            if isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Variable):
+                return (int(expression.left_side.value), expression.right_side.name, 1)
+            elif isinstance(expression.left_side, Variable) and isinstance(expression.right_side, Constant):
+                return (int(expression.right_side.value), expression.left_side.name, 1)
+            elif isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Power):
+                base = expression.right_side.base
+                exponent = expression.right_side.exponent
+
+                if isinstance(base, Variable) and isinstance(exponent, Constant):
+                    return (int(expression.left_side.value), base.name, int(exponent.value))
+            elif isinstance(expression.left_side, Power) and isinstance(expression.right_side, Constant):
+                base = expression.left_side.base
+                exponent = expression.left_side.exponent
+
+                if isinstance(base, Variable) and isinstance(exponent, Constant):
+                    return (int(expression.right_side.value), base.name, int(exponent.value))
+            
+        return None
 
 class AdditiveOperation(BinaryOperation):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
