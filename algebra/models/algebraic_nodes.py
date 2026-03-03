@@ -530,6 +530,41 @@ class AdditiveOperation(BinaryOperation):
         rebuild(root, combined_terms, 2)
 
         return root
+    
+    def combine_fractions(self) -> Quotient | None:
+        """
+        If `self` contains quotients, this method combines those quotients into one quotient 
+        and returns that `Quotient` representation.
+
+        Else, this method returns `None`.
+        """
+        if not isinstance(self.left_side, Quotient) or not isinstance(self.right_side, Quotient):
+            return None
+        
+        # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
+        if self.left_side.denominator.__eq__(self.right_side.denominator):
+            left_side = self.left_side.numerator.copy()
+            right_side = self.right_side.numerator.copy()
+            combined_numerators = Sum(left_side, right_side) if isinstance(self, Sum) else Difference(left_side, right_side)
+            
+            return Quotient(combined_numerators, self.left_side.denominator.copy())
+        
+        lcd, left_multiplier, right_multiplier = self.lowest_common_factor(self.left_side.denominator, self.right_side.denominator)
+        
+        left_numerator: Constant | Product
+        if isinstance(self.left_side.numerator, Constant) and isinstance(left_multiplier, Constant):
+            left_numerator = Constant(self.left_side.numerator.value * left_multiplier.value)
+        else:
+            left_numerator = Product(self.left_side.numerator.copy(), left_multiplier.copy())
+
+        right_numerator: Constant | Product
+        if isinstance(self.right_side.numerator, Constant) and isinstance(right_multiplier, Constant):
+            right_numerator = Constant(self.right_side.numerator.value * right_multiplier.value)
+        else:
+            right_numerator = Product(self.right_side.numerator.copy(), right_multiplier.copy())
+
+        combined_numerators = Sum(left_numerator, right_numerator) if isinstance(self, Sum) else Difference(left_numerator, right_numerator)
+        return Quotient(combined_numerators, lcd)
         
 class Sum(AdditiveOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -545,25 +580,6 @@ class Sum(AdditiveOperation):
             return Constant(0)
         
         return Constant(0)
-    
-    def combine_fractions(self) -> Quotient | None:
-        """
-        If `self` contains quotients on its left and right sides and their denominators are the same, 
-        this method combines those quotients into one quotient and returns that `Quotient` representation.
-
-        Else, this method returns `None`.
-        """
-        if not isinstance(self.left_side, Quotient) or not isinstance(self.right_side, Quotient):
-            return None
-        
-        # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
-        if self.left_side.denominator.__eq__(self.right_side.denominator):
-            combined_numerators = Sum(self.left_side.numerator.copy(), self.right_side.numerator.copy())
-            return Quotient(combined_numerators, self.left_side.denominator.copy())
-        
-        if isinstance(self.left_side.denominator, Constant) and isinstance(self.right_side.denominator, Constant):
-            pass
-            
 
 class Difference(AdditiveOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -571,23 +587,6 @@ class Difference(AdditiveOperation):
 
     def copy(self):
         return Difference(self.left_side.copy(), self.right_side.copy())
-    
-    def combine_fractions(self) -> Quotient | None:
-        """
-        If `self` contains quotients on its left and right sides and their denominators are the same, 
-        this method combines those quotients into one quotient and returns that `Quotient` representation.
-
-        Else, this method returns `None`.
-        """
-        if not isinstance(self.left_side, Quotient) or not isinstance(self.right_side, Quotient):
-            return None
-        
-        # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
-        if not self.left_side.denominator.__eq__(self.right_side.denominator):
-            return None
-        
-        combined_numerators = Difference(self.left_side.numerator.copy(), self.right_side.numerator.copy())
-        return Quotient(combined_numerators, self.left_side.denominator.copy())
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
