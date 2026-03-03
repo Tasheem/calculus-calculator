@@ -590,7 +590,11 @@ class Difference(AdditiveOperation):
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
-        super().__init__(left_side, "*", right_side)
+        # Flip sides if the expressions are a constant and a variable (i.e. x*3 becomes 3x)
+        if isinstance(left_side, Variable) and isinstance(right_side, Constant):
+            super().__init__(right_side, "*", left_side)
+        else:
+            super().__init__(left_side, "*", right_side)
 
     def copy(self):
         return Product(self.left_side.copy(), self.right_side.copy())
