@@ -590,8 +590,10 @@ class Difference(AdditiveOperation):
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
-        # Flip sides if the expressions are a constant and a variable (i.e. x*3 becomes 3x)
-        if isinstance(left_side, Variable) and isinstance(right_side, Constant):
+        # Flip sides to maintain coefficients on the left and variable on the right when dealing with certain expressions (i.e. x*3 becomes 3x)
+        if isinstance(left_side, Variable) and not isinstance(right_side, Variable):
+            super().__init__(right_side, "*", left_side)
+        elif isinstance(left_side, Power) and isinstance(left_side.base, Variable) and not isinstance(right_side, Variable):
             super().__init__(right_side, "*", left_side)
         else:
             super().__init__(left_side, "*", right_side)
