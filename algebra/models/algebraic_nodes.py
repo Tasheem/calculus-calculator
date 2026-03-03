@@ -251,6 +251,27 @@ class BinaryOperation(Expression):
                     return (int(expression.right_side.value), base.name, int(exponent.value))
             
         return None
+    
+    def lowest_common_factor(self, left: Expression, right: Expression) -> tuple[Expression, Expression, Expression]:
+        if isinstance(left, Constant) and isinstance(right, Constant):
+            lcf = int(max(left.value, right.value))
+            start = int(max(left.value, right.value))
+            worst_case = int(left.value * right.value)
+            for num in range(start, worst_case + 1):
+                # If both denominators are factors, we found our lowest common denominator.
+                if num % left.value == 0 and num % right.value == 0:
+                    lcf = num
+                    break
+
+            left_multiplier = int(lcf / left.value)
+            right_multiplier = int(lcf / right.value)
+
+            return (Constant(lcf), Constant(left_multiplier), Constant(right_multiplier))
+
+        lcf = Product(left.copy(), right.copy())
+        left_multiple = right.copy()
+        right_multiple = left.copy()
+        return (lcf, left_multiple, right_multiple)
 
 class AdditiveOperation(BinaryOperation):
     def __init__(self, left_side: Expression, operation: str, right_side: Expression) -> None:
@@ -536,11 +557,13 @@ class Sum(AdditiveOperation):
             return None
         
         # TODO: Replace this with a more robust Expression comparison function. Maybe traversing the expression tree.
-        if not self.left_side.denominator.__eq__(self.right_side.denominator):
-            return None
+        if self.left_side.denominator.__eq__(self.right_side.denominator):
+            combined_numerators = Sum(self.left_side.numerator.copy(), self.right_side.numerator.copy())
+            return Quotient(combined_numerators, self.left_side.denominator.copy())
         
-        combined_numerators = Sum(self.left_side.numerator.copy(), self.right_side.numerator.copy())
-        return Quotient(combined_numerators, self.left_side.denominator.copy())
+        if isinstance(self.left_side.denominator, Constant) and isinstance(self.right_side.denominator, Constant):
+            pass
+            
 
 class Difference(AdditiveOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -609,27 +632,19 @@ class Quotient(BinaryOperation):
         if not isinstance(self.denominator, Constant) or not isinstance(q2.denominator, Constant):
             return None
         
-        lcd = int(max(self.denominator.value, q2.denominator.value))
-        start = int(max(self.denominator.value, q2.denominator.value))
-        worst_case = int(self.denominator.value * q2.denominator.value)
-        for num in range(start, worst_case + 1):
-            # If both denominators are factors, we found our lowest common denominator.
-            if num % self.denominator.value == 0 and num % q2.denominator.value == 0:
-                lcd = num
-                break
+        lcd, q1_multiplier, q2_multiplier = self.lowest_common_factor(self.denominator, q2.denominator)
+        if not isinstance(q1_multiplier, Constant) or not isinstance(q2_multiplier, Constant):
+            return None
 
-        q1_multiplier = int(lcd / self.denominator.value)
-        q2_multiplier = int(lcd / q2.denominator.value)
-
-        q1_numerator = Constant(self.numerator.value * q1_multiplier) if isinstance(self.numerator, Constant) else Product(Constant(q1_multiplier), self.numerator.copy())
-        q2_numerator = Constant(q2.numerator.value * q2_multiplier) if isinstance(q2.numerator, Constant) else Product(Constant(q2_multiplier), q2.numerator.copy())
+        q1_numerator = Constant(self.numerator.value * q1_multiplier.value) if isinstance(self.numerator, Constant) else Product(Constant(q1_multiplier.value), self.numerator.copy())
+        q2_numerator = Constant(q2.numerator.value * q2_multiplier.value) if isinstance(q2.numerator, Constant) else Product(Constant(q2_multiplier.value), q2.numerator.copy())
 
         if isinstance(q1_numerator, Constant) and isinstance(q2_numerator, Constant):
             numerators_summed = Constant(q1_numerator.value + q2_numerator.value)
-            return Quotient(numerators_summed, Constant(lcd)).simplify()
+            return Quotient(numerators_summed, lcd).simplify()
         
         numerators_summed = Sum(q1_numerator, q2_numerator)
-        return Quotient(numerators_summed, Constant(lcd))
+        return Quotient(numerators_summed, lcd)
         
 
 class Power(BinaryOperation):
