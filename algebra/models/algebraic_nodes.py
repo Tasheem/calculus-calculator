@@ -650,6 +650,21 @@ class Quotient(BinaryOperation):
         
         numerators_summed = Sum(q1_numerator, q2_numerator)
         return Quotient(numerators_summed, lcd)
+    
+    def combine_like_terms(self):
+        """
+        If the numerator contains like terms, this method combines like terms in the numerator and returns a new `Quotient` object with the result.
+
+        Else it returns a copy of the current object.
+        """
+        if not isinstance(self.numerator, (Sum, Difference)):
+            return self.copy()
+
+        combined = self.numerator.combine_like_terms()
+        if combined is None:
+            return self.copy()
+
+        return Quotient(combined, self.denominator.copy())
         
 
 class Power(BinaryOperation):

@@ -502,8 +502,21 @@ def test_combine_like_terms_17():
     right = Quotient(Variable("x"), Constant(3))
     equation = Sum(left, right)
 
-    result = equation.combine_like_terms()
-    assert isinstance(result, Quotient)
-    assert isinstance(result.numerator, Product) and isinstance(result.denominator, Constant)
-    assert isinstance(result.numerator.left_side, Constant) and isinstance(result.numerator.right_side, Variable)
-    assert result.numerator.left_side.value == 5 and result.numerator.right_side.name == "x" and result.denominator.value == 6
+    result = equation.combine_fractions()
+    assert result is not None
+
+    # Add fractions, then combine like terms in the numerator
+    assert isinstance(result.numerator, Sum)
+    assert isinstance(result.numerator.left_side, Product) and isinstance(result.numerator.right_side, Product)
+    three_x = result.numerator.left_side
+    two_x = result.numerator.right_side
+    assert isinstance(three_x.left_side, Constant) and isinstance(three_x.right_side, Variable)
+    assert isinstance(two_x.left_side, Constant) and isinstance(two_x.right_side, Variable)
+    assert three_x.left_side.value == 3 and three_x.right_side.name == "x"
+    assert two_x.left_side.value == 2 and two_x.right_side.name == "x"
+
+    combined_like_terms = result.combine_like_terms()
+    assert isinstance(combined_like_terms.numerator, Product) and isinstance(combined_like_terms.denominator, Constant)
+    assert isinstance(combined_like_terms.numerator.left_side, Constant) and isinstance(combined_like_terms.numerator.right_side, Variable)
+    assert combined_like_terms.numerator.left_side.value == 5 and combined_like_terms.numerator.right_side.name == "x"
+    assert combined_like_terms.denominator.value == 6
