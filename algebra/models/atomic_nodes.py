@@ -16,8 +16,12 @@ class Expression:
     
     def copy[T](self: T) -> T:
         return self
+    
+class Atomic(Expression):
+    def __init__(self) -> None:
+        super().__init__()
 
-class Constant(Expression):
+class Constant(Atomic):
     def __init__(self, value: float) -> None:
         super().__init__()
 
@@ -32,7 +36,7 @@ class Constant(Expression):
     def additive_inverse(self):
         return Constant(-self.value)
 
-class Variable(Expression):
+class Variable(Atomic):
     def __init__(self, name: str) -> None:
         super().__init__()
 
