@@ -49,7 +49,7 @@ def normalize(expression: Expression):
     - Quotient with denominator Constant(1) → replace with numerator
     - Constant nodes that are the result of an operation on two other Constant nodes → evaluate numerically and collapse to a single Constant
     """
-    pass
+    return _normalize(expression)
 
 def _normalize(expression: Expression):
     if isinstance(expression, Atomic):
