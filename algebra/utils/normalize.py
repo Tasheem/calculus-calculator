@@ -1,5 +1,6 @@
 from models.atomic_nodes import *
 from models.algebraic_nodes import *
+from models.n_ary_nodes import *
 
 def normalize(expression: Expression):
     """
@@ -61,11 +62,14 @@ def _normalize(expression: Expression):
     # Pass 2
     updated_expression = eliminate_difference(expression)
 
-    # TODO: Implement passes 3-7
+    # Pass 3
+    updated_expression = flatten_node(expression)
+
+    # TODO: Implement passes 4-7
 
     return updated_expression
 
-def eliminate_difference(expression: Expression):
+def eliminate_difference(expression: Expression) -> Expression:
     """
     This function transforms `Difference` nodes into `Product(-1, expression)` nodes.
     """
@@ -74,3 +78,32 @@ def eliminate_difference(expression: Expression):
         return Sum(expression.left_side, Product(Constant(-1), expression.right_side))
     
     return expression
+
+def flatten_node(expression: Expression) -> Expression:
+    """
+    This function flattens `Product` and `Sum` nodes. This function only combines direct children
+    with their parent node, since pass 1 recurses and guarantees that grandchild nodes are already flattened.\n
+
+    N-ary nodes are also taken into account since they're being constructed on the way back up the expression tree.
+    """
+    if not isinstance(expression, (Sum, Product)):
+        return expression.copy()
+    
+    nodes: list[Expression] = []
+    def add_children(child: Expression):
+        if (isinstance(expression, Sum) and isinstance(child, Sum)) or (isinstance(expression, Product) and isinstance(child, Product)):
+            nodes.append(child.left_side)
+            nodes.append(child.right_side)
+        elif isinstance(child, NAryNode) and child.is_n_ary_equivalent(expression):
+            nodes.extend(child.operands)
+        else:
+            nodes.append(child)
+
+    add_children(expression.left_side)
+    add_children(expression.right_side)
+
+    if len(nodes) == 2:
+        # Keep binary nodes if there aren't nested sums or products.
+        return Sum(nodes[0], nodes[1]) if isinstance(expression, Sum) else Product(nodes[0], nodes[1])
+
+    return FlatSum(nodes) if isinstance(expression, Sum) else FlatProduct(nodes)
