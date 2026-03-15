@@ -53,7 +53,10 @@ def normalize(expression: Expression):
 
 def _normalize(expression: Expression):
     if isinstance(expression, Atomic):
-        return expression
+        return expression.copy()
+    elif isinstance(expression, BinaryOperation):
+        expression.left_side = _normalize(expression.left_side)
+        expression.right_side = _normalize(expression.right_side)
 
     # Pass 2
     updated_expression = eliminate_difference(expression)
