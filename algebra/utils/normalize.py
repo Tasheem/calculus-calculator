@@ -21,7 +21,6 @@ def normalize(expression: Expression):
     Pass 4: Expand Products Over Sums
     - Distribute Product to each child in the `Sum`.
         - And the `Sum` must be a direct node.
-    - Keep recursing and distrubuting to `Sum` nodes if there are more nested deeper in the tree.
 
     Pass 5: Collect Like Terms
     - Merge `Sum` children that share the same symbolic part.
@@ -63,9 +62,12 @@ def _normalize(expression: Expression):
     updated_expression = eliminate_difference(expression)
 
     # Pass 3
-    updated_expression = flatten_node(expression)
+    updated_expression = flatten_sums_products(expression)
 
-    # TODO: Implement passes 4-7
+    # Pass 4
+    updated_expression = expand_product_over_sums(expression)
+
+    # TODO: Implement passes 5-7
 
     return updated_expression
 
@@ -79,9 +81,9 @@ def eliminate_difference(expression: Expression) -> Expression:
     
     return expression
 
-def flatten_node(expression: Expression) -> Expression:
+def flatten_sums_products(expression: Expression) -> Expression:
     """
-    This function flattens `Product` and `Sum` nodes. This function only combines direct children
+    This function flattens nested `Product` and `Sum` nodes since they are associative operations. This function only combines direct children
     with their parent node, since pass 1 recurses and guarantees that grandchild nodes are already flattened.\n
 
     N-ary nodes are also taken into account since they're being constructed on the way back up the expression tree.
@@ -107,3 +109,114 @@ def flatten_node(expression: Expression) -> Expression:
         return Sum(nodes[0], nodes[1]) if isinstance(expression, Sum) else Product(nodes[0], nodes[1])
 
     return FlatSum(nodes) if isinstance(expression, Sum) else FlatProduct(nodes)
+
+def expand_product_over_sums(expression: Expression):
+    """
+    This function applies the distributive law to expand products over sums.
+    """
+    if isinstance(expression, Product):
+        if isinstance(expression.left_side, Sum) and isinstance(expression.right_side, Sum):
+            return foil(expression.left_side, expression.right_side)
+        elif isinstance(expression.left_side, Sum):
+            return multiply_across(expression.right_side, expression.left_side)
+        
+        multiplied = multiply_to_expand(expression.left_side, expression.right_side)
+        return expression.copy() if multiplied is None else multiplied
+    elif isinstance(expression, BinaryOperation):
+        left_updated = expand_product_over_sums(expression.left_side)
+        right_updated = expand_product_over_sums(expression.right_side)
+
+        expression.left_side = left_updated
+        expression.right_side = right_updated
+
+        return expression.copy()
+    
+    return expression.copy()
+    
+def multiply_across(left_side: Expression, sum: Sum | FlatSum):
+    """
+    This function multiplies one expression over each operand in a `Sum` or `FlatSum` expression.
+    """
+    sum_operands = [sum.left_side, sum.right_side] if isinstance(sum, Sum) else sum.operands
+    result: list[Expression] = []
+
+    for operand in sum_operands:
+        curr_res = multiply_to_expand(left_side, operand)
+        if curr_res is None:
+            raise ValueError("Something went wrong when multiplying a product across a sum.", left_side, operand)
+        
+        if isinstance(curr_res, Constant) and curr_res.value == 0:
+            continue
+        
+        result.append(curr_res)
+    
+    if len(result) == 2:
+        return Sum(result[0], result[1])
+    
+    return FlatSum(result)
+
+def foil(left_side: Sum, right_side: Sum):
+    # FOIL
+    operands = []
+    # First
+    first_left = left_side.left_side
+    first_right = right_side.left_side
+    first_res = multiply_to_expand(first_left, first_right)
+    if first_res is None:
+        raise ValueError("Something went wrong with the F-operation when using the FOIL method in multiply_to_expand().")
+    
+    operands.append(first_res)
+    # Outside
+    outside_left = left_side.left_side
+    outside_right = right_side.right_side
+    outside_res = multiply_to_expand(outside_left, outside_right)
+    if outside_res is None:
+        raise ValueError("Something went wrong with the O-operation when using the FOIL method in multiply_to_expand().")
+    
+    operands.append(outside_res)
+    # Inside
+    inside_left = left_side.right_side
+    inside_right = right_side.left_side
+    inside_res = multiply_to_expand(inside_left, inside_right)
+    if inside_res is None:
+        raise ValueError("Something went wrong with the O-operation when using the FOIL method in multiply_to_expand().")
+    
+    operands.append(inside_res)
+    # Last
+    inside_left = left_side.right_side
+    inside_right = right_side.right_side
+    inside_res = multiply_to_expand(inside_left, inside_right)
+    if inside_res is None:
+        raise ValueError("Something went wrong with the O-operation when using the FOIL method in multiply_to_expand().")
+    
+    operands.append(inside_res)
+
+    return FlatSum(operands)
+
+def multiply_to_expand(left_side: Expression, right_side: Expression):
+    if (isinstance(left_side, Constant) and left_side == 0) or (isinstance(right_side, Constant) and right_side.value == 0):
+        return Constant(0)
+
+    # Multiply two expressions and return the result.
+    if isinstance(left_side, Constant) and isinstance(right_side, Constant):
+        return Constant(left_side.value * right_side.value)
+    elif isinstance(left_side, Quotient) and isinstance(right_side, Quotient):
+        return left_side.multiply(right_side)
+    elif isinstance(left_side, (Constant, Quotient)) and isinstance(right_side, Variable):
+        return Product(left_side.copy(), right_side.copy())
+    elif isinstance(left_side, Variable) and isinstance(right_side, (Constant, Quotient)):
+        return Product(right_side.copy(), left_side.copy())
+    elif isinstance(left_side, (Constant, Quotient)) and isinstance(right_side, Power):
+        return Product(left_side.copy(), right_side.copy())
+    elif isinstance(left_side, Power) and isinstance(right_side, (Constant, Quotient)):
+        return Product(right_side.copy(), left_side.copy())
+    elif isinstance(left_side, Variable) and isinstance(right_side, Variable):
+        if left_side.name == right_side.name:
+            return Power(left_side.copy(), Constant(2))
+        else:
+            return Product(left_side.copy(), right_side.copy())
+    elif isinstance(left_side, Power) and isinstance(right_side, Power):
+        return left_side.multiply(right_side)
+    else:
+        return None
+    

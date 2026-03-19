@@ -12,19 +12,8 @@ class NAryNode(Expression):
     def compute(self) -> Expression:
         return Constant(0)
     
+    def copy(self):
+        return FlatSum(self.operands) if isinstance(self, FlatSum) else FlatProduct(self.operands)
+    
     def is_n_ary_equivalent(self, node: Expression) -> bool:
         return False
-
-class FlatSum(NAryNode):
-    def __init__(self, operands: list[Expression]) -> None:
-        super().__init__(operands)
-
-    def is_n_ary_equivalent(self, node: Expression):
-        return isinstance(node, Sum)
-
-class FlatProduct(NAryNode):
-    def __init__(self, operands: list[Expression]) -> None:
-        super().__init__(operands)
-
-    def is_n_ary_equivalent(self, node: Expression):
-        return isinstance(node, Product)   

@@ -370,11 +370,10 @@ class AdditiveOperation(BinaryOperation):
         left_has_like_terms = self._has_like_terms_helper(expression.left_side, seen)
         right_has_like_terms = self._has_like_terms_helper(expression.right_side, seen)
         return left_has_like_terms or right_has_like_terms
-
     
     def find_like_terms(self):
         """
-        This function finds like terms in an expression returns the results in a map,
+        This function finds like terms in an expression and returns the results in a map
         with the key being the non-coefficient portion of like terms and the value being a list of coefficients 
         with matching non-coefficient expressions.
         """
@@ -390,6 +389,13 @@ class AdditiveOperation(BinaryOperation):
             right_is_valid = self._find_like_terms_helper(expression.right_side, map, isinstance(expression, Difference))
 
             return left_is_valid and right_is_valid
+        elif isinstance(expression, FlatSum):
+            for operand in expression.operands:
+                is_valid = self._find_like_terms_helper(operand, map, False)
+                if not is_valid:
+                    return False
+                
+            return True
         else:
             coefficient, variable_part = self.extract_coefficient(expression, distribute_minus)
             if coefficient is None or variable_part is None:
@@ -470,6 +476,9 @@ class AdditiveOperation(BinaryOperation):
         
         if len(combined_terms) == 1:
             return combined_terms[0]
+        
+        if isinstance(self, FlatSum):
+            return FlatSum(combined_terms)
         
         # [2x², 13x, 9]
         def rebuild(parent: Expression, terms: list[Expression], curr: int):
@@ -587,6 +596,20 @@ class Difference(AdditiveOperation):
 
     def copy(self):
         return Difference(self.left_side.copy(), self.right_side.copy())
+    
+class FlatSum(AdditiveOperation):
+    def __init__(self, operands: list[Expression]) -> None:
+        if len(operands) < 2:
+            raise ValueError("A FlatSum instance cannot contain less than two operands.")
+        
+        super().__init__(operands[0], "+", operands[1])
+        self.operands = operands
+    
+    def copy(self):
+        return FlatSum(self.operands)
+
+    def is_n_ary_equivalent(self, node: Expression):
+        return isinstance(node, Sum)
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
@@ -651,6 +674,16 @@ class Quotient(BinaryOperation):
         numerators_summed = Sum(q1_numerator, q2_numerator)
         return Quotient(numerators_summed, lcd)
     
+    def multiply(self, q2: Quotient):
+        # May need to add more complex fractions later but only handling fractions with constants for now.
+        if not isinstance(self.numerator, Constant) or not isinstance(q2.numerator, Constant) or not isinstance(self.denominator, Constant) or not isinstance(q2.denominator, Constant):
+            return None
+        
+        # Multiply the top and bottom.
+        numerator = Constant(self.numerator.value * q2.denominator.value)
+        denominator = Constant(self.denominator.value * q2.denominator.value)
+        return Quotient(numerator, denominator).simplify()
+    
     def combine_like_terms(self):
         """
         If the numerator contains like terms, this method combines like terms in the numerator and returns a new `Quotient` object with the result.
@@ -665,6 +698,23 @@ class Quotient(BinaryOperation):
             return self.copy()
 
         return Quotient(combined, self.denominator.copy())
+    
+class FlatProduct(BinaryOperation):
+    def __init__(self, operands: list[Expression]) -> None:
+        if len(operands) < 2:
+            raise ValueError("A FlatProduct instance cannot contain less than two operands.")
+        
+        super().__init__(operands[0], "+", operands[1])
+        self.operands = operands
+
+    def compute(self) -> Expression:
+        return Constant(0)
+    
+    def copy(self):
+        return FlatProduct(self.operands)
+
+    def is_n_ary_equivalent(self, node: Expression):
+        return isinstance(node, Product)   
         
 
 class Power(BinaryOperation):
@@ -676,3 +726,13 @@ class Power(BinaryOperation):
 
     def copy(self):
         return Power(self.left_side.copy(), self.right_side.copy())
+    
+    def multiply(self, power: Power):
+        if not isinstance(self.base, Variable) or not isinstance(power.base, Variable) or self.base.name != power.base.name:
+            return Product(self.copy(), power.copy())
+        
+        if not isinstance(self.exponent, Constant) or not isinstance(power.exponent, Constant):
+            return Product(self.copy(), power.copy())
+        
+        # Adding exponents when multiplying powers with the same base. 
+        return Power(self.copy(), Constant(self.exponent.value + power.exponent.value))
