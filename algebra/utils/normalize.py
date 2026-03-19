@@ -1,6 +1,5 @@
 from models.atomic_nodes import *
 from models.algebraic_nodes import *
-from models.n_ary_nodes import *
 
 def normalize(expression: Expression):
     """
@@ -96,7 +95,7 @@ def flatten_sums_products(expression: Expression) -> Expression:
         if (isinstance(expression, Sum) and isinstance(child, Sum)) or (isinstance(expression, Product) and isinstance(child, Product)):
             nodes.append(child.left_side)
             nodes.append(child.right_side)
-        elif isinstance(child, NAryNode) and child.is_n_ary_equivalent(expression):
+        elif isinstance(child, (FlatSum, FlatProduct)) and child.is_n_ary_equivalent(expression):
             nodes.extend(child.operands)
         else:
             nodes.append(child)
