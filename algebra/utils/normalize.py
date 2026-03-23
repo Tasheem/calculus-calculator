@@ -1,5 +1,5 @@
-from models.atomic_nodes import *
-from models.algebraic_nodes import *
+from algebra.models.atomic_nodes import *
+from algebra.models.algebraic_nodes import *
 
 def normalize(expression: Expression):
     """
@@ -74,6 +74,9 @@ def _normalize(expression: Expression):
 
     # Pass 7
     updated_expression = simplify_trivial(updated_expression)
+
+    # TODO: Implement this normalize function recursively.
+    # TODO: Get rid of recursive calls inside the Pass functions since this normalize function should be recursive.
 
     return updated_expression
 
