@@ -487,12 +487,6 @@ class AdditiveOperation(BinaryOperation):
             
             curr_expression = terms[curr]
             if isinstance(parent, (Sum, Difference)):
-                # Determine if the next expression has a negative.
-                # If so, undo the distribution of the negative and create a Difference node.
-                is_neg, updated_expression = is_negative(curr_expression)
-                if is_neg:
-                    parent.right_side = Difference(parent.right_side, updated_expression)
-
                 # Build the expression from left to right. Replace the right side with a new sum node
                 # where the left side of that sum node is the old right side of the parent.
                 parent.right_side = Sum(parent.right_side, curr_expression)
@@ -506,36 +500,8 @@ class AdditiveOperation(BinaryOperation):
 
             # TODO: Implement the recursive case here.
             rebuild(curr_expression, terms, curr + 1)
-
-        def is_negative(expression: Expression) -> tuple[bool, Expression]:
-            if isinstance(expression, Constant):
-                return (True, expression.additive_inverse()) if expression.value < 0 else (False, expression)
-            elif isinstance(expression, Product):
-                # Consider the expression negative if its coefficient is negative.
-                if isinstance(expression.left_side, Constant) and expression.left_side.value < 0:
-                    copy = expression.copy()
-                    # Flip the sign
-                    copy.left_side = expression.left_side.additive_inverse()
-
-                    return (True, copy)
-                else:
-                    return (False, expression)
-            elif isinstance(expression, Quotient):
-                # Consider the expression negative if its coefficient is negative.
-                if isinstance(expression.numerator, Constant) and expression.numerator.value < 0:
-                    copy = expression.copy()
-                    # Flip the sign
-                    copy.numerator = expression.numerator.additive_inverse()
-                    copy.left_side = copy.numerator
-
-                    return (True, copy)
-                else:
-                    return (False, expression)
-            else:
-                return (False, expression)
                 
-        is_neg, second_term = is_negative(combined_terms[1])
-        root = Difference(combined_terms[0], second_term) if is_neg else Sum(combined_terms[0], second_term)
+        root = Sum(combined_terms[0], combined_terms[1])
         rebuild(root, combined_terms, 2)
 
         return root
