@@ -61,12 +61,15 @@ def _normalize(expression: Expression):
     updated_expression = eliminate_difference(expression)
 
     # Pass 3
-    updated_expression = flatten_sums_products(expression)
+    updated_expression = flatten_sums_products(updated_expression)
 
     # Pass 4
-    updated_expression = expand_product_over_sums(expression)
+    updated_expression = expand_product_over_sums(updated_expression)
 
-    # TODO: Implement passes 5-7
+    # Pass 5
+    updated_expression = combine_like_terms(updated_expression)
+
+    # TODO: Implement passes 6-7
 
     return updated_expression
 
@@ -218,4 +221,17 @@ def multiply_to_expand(left_side: Expression, right_side: Expression):
         return left_side.multiply(right_side)
     else:
         return None
+    
+def combine_like_terms(expression: Expression):
+    if isinstance(expression, (Sum, FlatSum)):
+        return expression.combine_like_terms()
+    elif isinstance(expression, BinaryOperation):
+        # Traverse tree to find more Sum or FlatSum nodes.
+        updated_left = combine_like_terms(expression.left_side)
+        updated_right = combine_like_terms(expression.right_side)
+
+        expression.left_side = updated_left
+        expression.right_side = updated_right
+
+    return expression
     
