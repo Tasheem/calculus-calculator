@@ -69,7 +69,10 @@ def _normalize(expression: Expression):
     # Pass 5
     updated_expression = combine_like_terms(updated_expression)
 
-    # TODO: Implement passes 6-7
+    # Pass 6
+    updated_expression = sort_canonically(updated_expression)
+
+    # TODO: Implement pass 7
 
     return updated_expression
 
@@ -233,5 +236,76 @@ def combine_like_terms(expression: Expression):
         expression.left_side = updated_left
         expression.right_side = updated_right
 
-    return expression
+    return expression.copy()
+
+def sort_canonically(expression: Expression):
+    """
+    This function sorts the children in `Sum` and `Product` nodes based on their 
+    degree and the ascii value of their variable. 
+    """
+
+    def sort_by_variable(exp: Expression):
+        if not isinstance(exp, BinaryOperation):
+            return exp.copy()
+
+        if isinstance(exp, (Sum, Product)):
+            if isinstance(exp, Sum):
+                return exp if expression_ascii(exp.left_side) < expression_ascii(exp.right_side) else Sum(exp.right_side, exp.left_side)
+            else:
+                return exp if expression_ascii(exp.left_side) < expression_ascii(exp.right_side) else Product(exp.right_side, exp.left_side)
+        elif isinstance(exp, (FlatSum, FlatProduct)):
+            sorted_operands = sorted(exp.operands, key=expression_ascii)
+            return FlatSum(sorted_operands) if isinstance(exp, FlatSum) else FlatProduct(sorted_operands)
+        elif isinstance(exp, BinaryOperation):
+            # Recurse
+            exp.left_side = sort_by_degree(exp.left_side)
+            exp.right_side = sort_by_degree(exp.right_side)
+
+        return exp.copy()
+
+    def sort_by_degree(exp: Expression):
+        if isinstance(exp, (Sum, Product)):
+            if isinstance(exp, Sum):
+                return Sum(exp.right_side, exp.left_side) if degree(exp.left_side) < degree(exp.right_side) else exp
+            else:
+                return Product(exp.right_side, exp.left_side) if degree(exp.left_side) < degree(exp.right_side) else exp
+        elif isinstance(exp, (FlatSum, FlatProduct)):
+            sorted_operands = sorted(exp.operands, key=degree, reverse=True)
+            return FlatSum(sorted_operands) if isinstance(exp, FlatSum) else FlatProduct(sorted_operands)
+        elif isinstance(exp, BinaryOperation):
+            # Recurse
+            exp.left_side = sort_by_degree(exp.left_side)
+            exp.right_side = sort_by_degree(exp.right_side)
+
+        return exp.copy()
+    
+    variable_sorted = sort_by_variable(expression)
+    return sort_by_degree(variable_sorted)
+
+def degree(expression: Expression):
+    if isinstance(expression, Constant):
+        return 0
+    elif isinstance(expression, Variable):
+        return 1
+    elif isinstance(expression, Power):
+        return expression.exponent.value if isinstance(expression.exponent, Constant) else 1
+    elif isinstance(expression, Product):
+        return degree(expression.right_side)
+    
+    return 0
+
+def expression_ascii(expression: Expression) -> int:
+    if isinstance(expression, Variable):
+        return ord(expression.name)
+    elif isinstance(expression, BinaryOperation):
+        left_side = expression_ascii(expression.left_side)
+        right_side = expression_ascii(expression.right_side)
+
+        if left_side != ord("z"):
+            return left_side
+        elif right_side != ord("z"):
+            return right_side
+
+    # Default to highest alphanumeric value so that it is placed toward the back of a sort.
+    return ord("z")
     
