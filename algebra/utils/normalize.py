@@ -72,7 +72,8 @@ def _normalize(expression: Expression):
     # Pass 6
     updated_expression = sort_canonically(updated_expression)
 
-    # TODO: Implement pass 7
+    # Pass 7
+    updated_expression = simplify_trivial(updated_expression)
 
     return updated_expression
 
@@ -308,4 +309,20 @@ def expression_ascii(expression: Expression) -> int:
 
     # Default to highest alphanumeric value so that it is placed toward the back of a sort.
     return ord("z")
-    
+
+def simplify_trivial(expression: Expression):
+    if isinstance(expression, Sum) and isinstance(expression.left_side, Constant) and expression.left_side.value == 0:
+        return expression.right_side
+    elif isinstance(expression, Sum) and isinstance(expression.right_side, Constant) and expression.right_side.value == 0:
+        return expression.left_side
+    elif isinstance(expression, Product) and isinstance(expression.left_side, Constant) and expression.left_side.value == 0:
+        return Constant(0)
+    elif isinstance(expression, Product) and isinstance(expression.right_side, Constant) and expression.right_side.value == 0:
+        return Constant(0)
+    elif isinstance(expression, Quotient) and isinstance(expression.denominator, Constant) and expression.denominator.value == 1:
+        return expression.numerator
+    elif isinstance(expression, BinaryOperation):
+        expression.left_side = simplify_trivial(expression.left_side)
+        expression.right_side = simplify_trivial(expression.right_side)
+
+    return expression
