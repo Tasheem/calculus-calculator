@@ -333,7 +333,7 @@ def test_combine_like_terms_5():
     equation = Sum(left, right)
 
     result = equation.combine_like_terms()
-    assert result is None
+    assert result.__eq__(equation)
 
 # x³ + x²
 # Cannot combine
@@ -343,7 +343,7 @@ def test_combine_like_terms_6():
     equation = Sum(left, right)
 
     result = equation.combine_like_terms()
-    assert result is None
+    assert result.__eq__(equation)
 
 # x² + x² = 2x²
 def test_combine_like_terms_7():

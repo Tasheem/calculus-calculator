@@ -413,7 +413,7 @@ class AdditiveOperation(BinaryOperation):
 
     def combine_like_terms(self):
         if not self.has_like_terms():
-            return None
+            return self.copy()
 
         # Find like terms
         map = self.find_like_terms()
