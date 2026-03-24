@@ -43,3 +43,11 @@ def test_eliminate_difference_7():
     result = eliminate_difference(equation)
     
     assert result == Sum(Constant(2), Product(Constant(-1), Product(Sum(Variable("x"), Constant(-1)), Sum(Variable("x"), Constant(1)))))
+
+def test_flatten_sum_products_1():
+    # Basic `Sum` flattening
+    equation = Sum(Variable("x"), Sum(Variable("y"), Variable("z")))
+    result = flatten_sums_products(equation)
+    print("Result:", result)
+
+    assert result == FlatSum([Variable("x"), Variable("y"), Variable("z")])
