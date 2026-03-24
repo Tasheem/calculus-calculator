@@ -23,6 +23,11 @@ class BinaryOperation(Expression):
                 equation_body = f"{self._stringify(expression.left_side, expression)}{superscript(int(expression.right_side.value)) if isinstance(expression.right_side, Constant) else "^" + self._stringify(expression.right_side, expression)}"
             elif isinstance(expression, Product) and isinstance(expression.right_side, (Power, Variable)):
                 equation_body = f"{self._stringify(expression.left_side, expression)}{self._stringify(expression.right_side, expression)}"
+            elif isinstance(expression, (FlatSum, FlatProduct)):
+                equation_body = self._stringify(expression.operands[0], expression)
+                for i in range(1, len(expression.operands)):
+                    curr = expression.operands[i]
+                    equation_body = f"{equation_body} {"+" if isinstance(expression, FlatSum) else "*"} {self._stringify(curr, expression)}"
             else:
                 equation_body = f"{self._stringify(expression.left_side, expression)} {expression.operation} {self._stringify(expression.right_side, expression)}"
             
