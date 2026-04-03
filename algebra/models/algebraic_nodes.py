@@ -535,13 +535,13 @@ class AdditiveOperation(BinaryOperation):
         if isinstance(self.left_side.numerator, Constant) and isinstance(left_multiplier, Constant):
             left_numerator = Constant(self.left_side.numerator.value * left_multiplier.value)
         else:
-            left_numerator = Product(self.left_side.numerator.copy(), left_multiplier.copy())
+            left_numerator = Product(left_multiplier.copy(), self.left_side.numerator.copy())
 
         right_numerator: Constant | Product
         if isinstance(self.right_side.numerator, Constant) and isinstance(right_multiplier, Constant):
             right_numerator = Constant(self.right_side.numerator.value * right_multiplier.value)
         else:
-            right_numerator = Product(self.right_side.numerator.copy(), right_multiplier.copy())
+            right_numerator = Product(right_multiplier.copy(), self.right_side.numerator.copy())
 
         combined_numerators = Sum(left_numerator, right_numerator) if isinstance(self, Sum) else Difference(left_numerator, right_numerator)
         return Quotient(combined_numerators, lcd)
@@ -584,13 +584,7 @@ class FlatSum(AdditiveOperation):
 
 class Product(BinaryOperation):
     def __init__(self, left_side: Expression, right_side: Expression) -> None:
-        # Flip sides to maintain coefficients on the left and variable on the right when dealing with certain expressions (i.e. x*3 becomes 3x)
-        if isinstance(left_side, Variable) and not isinstance(right_side, Variable):
-            super().__init__(right_side, "*", left_side)
-        elif isinstance(left_side, Power) and isinstance(left_side.base, Variable) and not isinstance(right_side, Variable):
-            super().__init__(right_side, "*", left_side)
-        else:
-            super().__init__(left_side, "*", right_side)
+        super().__init__(left_side, "*", right_side)
 
     def copy(self):
         return Product(self.left_side.copy(), self.right_side.copy())
