@@ -48,6 +48,41 @@ def test_flatten_sum_products_1():
     # Basic `Sum` flattening
     equation = Sum(Variable("x"), Sum(Variable("y"), Variable("z")))
     result = flatten_sums_products(equation)
-    print("Result:", result)
 
     assert result == FlatSum([Variable("x"), Variable("y"), Variable("z")])
+
+def test_flatten_sum_products_2():
+    equation = Product(Variable("x"), Product(Variable("y"), Variable("z")))
+    result = flatten_sums_products(equation)
+
+    assert result ==  FlatProduct([Variable("x"), Variable("y"), Variable("z")])
+
+def test_flatten_sum_products_3():
+    equation = Sum(Sum(Variable("x"), Variable("y")), Sum(Variable("z"), Constant(1)))
+    result = flatten_sums_products(equation)
+
+    assert result == FlatSum([Variable("x"), Variable("y"), Variable("z"), Constant(1)])
+
+def test_flatten_sum_products_4():
+    equation = Product(Product(Variable("x"), Variable("y")), Product(Variable("z"), Constant(2)))
+    result = flatten_sums_products(equation)
+
+    assert result == FlatProduct([Variable("x"), Variable("y"), Variable("z"), Constant(2)])
+
+def test_flatten_sum_products_5():
+    equation = Product(Variable("x"), Sum(Variable("y"), Variable("z")))
+    result = flatten_sums_products(equation)
+
+    assert result == Product(Variable("x"), Sum(Variable("y"), Variable("z")))
+
+def test_flatten_sum_products_6():
+    equation = Sum(Variable("x"), Product(Variable("y"), Variable("z")))
+    result = flatten_sums_products(equation)
+
+    assert result == Sum(Variable("x"), Product(Variable("y"), Variable("z")))
+
+def test_flatten_sum_products_7():
+    equation = Power(Variable("x"), Constant(2))
+    result = flatten_sums_products(equation)
+
+    assert result == Power(Variable("x"), Constant(2))
