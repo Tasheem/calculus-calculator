@@ -196,7 +196,7 @@ def foil(left_side: Sum, right_side: Sum):
     inside_right = right_side.right_side
     inside_res = multiply_to_expand(inside_left, inside_right)
     if inside_res is None:
-        raise ValueError("Something went wrong with the O-operation when using the FOIL method in multiply_to_expand().")
+        raise ValueError("Something went wrong with the O-operation when using the FOIL method in multiply_to_expand(). Probably related to Quotient multiplication.")
     
     operands.append(inside_res)
 
@@ -207,27 +207,12 @@ def multiply_to_expand(left_side: Expression, right_side: Expression):
         return Constant(0)
 
     # Multiply two expressions and return the result.
-    if isinstance(left_side, Constant) and isinstance(right_side, Constant):
-        return Constant(left_side.value * right_side.value)
-    elif isinstance(left_side, Quotient) and isinstance(right_side, Quotient):
-        return left_side.multiply(right_side)
-    elif isinstance(left_side, (Constant, Quotient)) and isinstance(right_side, Variable):
-        return Product(left_side.copy(), right_side.copy())
-    elif isinstance(left_side, Variable) and isinstance(right_side, (Constant, Quotient)):
-        return Product(right_side.copy(), left_side.copy())
-    elif isinstance(left_side, (Constant, Quotient)) and isinstance(right_side, Power):
-        return Product(left_side.copy(), right_side.copy())
-    elif isinstance(left_side, Power) and isinstance(right_side, (Constant, Quotient)):
-        return Product(right_side.copy(), left_side.copy())
-    elif isinstance(left_side, Variable) and isinstance(right_side, Variable):
-        if left_side.name == right_side.name:
-            return Power(left_side.copy(), Constant(2))
-        else:
-            return Product(left_side.copy(), right_side.copy())
-    elif isinstance(left_side, Power) and isinstance(right_side, Power):
-        return left_side.multiply(right_side)
+    if isinstance(left_side, Sum):
+        return Sum(multiply_to_expand(left_side.left_side, right_side), multiply_to_expand(left_side.right_side, right_side))
+    elif isinstance(right_side, Sum):
+        return Sum(multiply_to_expand(left_side, right_side.left_side), multiply_to_expand(left_side, right_side.right_side))
     else:
-        return None
+        return Product(left_side.copy(), right_side.copy())
     
 def combine_like_terms(expression: Expression):
     if isinstance(expression, (Sum, FlatSum)):
@@ -324,6 +309,23 @@ def simplify_trivial(expression: Expression):
         return Constant(0)
     elif isinstance(expression, Quotient) and isinstance(expression.denominator, Constant) and expression.denominator.value == 1:
         return expression.numerator
+    elif isinstance(expression, Sum) and isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Constant):
+        return Constant(expression.left_side.value + expression.right_side.value)
+    elif isinstance(expression, Sum) and isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Quotient):
+        product = expression.left_side.add(expression.right_side)
+        return expression if product is None else product
+    elif isinstance(expression, Product) and isinstance(expression.left_side, Constant) and isinstance(expression.right_side, Constant):
+        return Constant(expression.left_side.value * expression.right_side.value)
+    elif isinstance(expression, Product) and isinstance(expression.left_side, Quotient) and isinstance(expression.right_side, Quotient):
+        product = expression.left_side.multiply(expression.right_side)
+        return expression if product is None else product
+    elif isinstance(expression, Product) and isinstance(expression.left_side, Variable) and isinstance(expression.right_side, Variable):
+        if expression.left_side.name == expression.right_side.name:
+            return Power(expression.left_side.copy(), Constant(2))
+        else:
+            return Product(expression.left_side.copy(), expression.right_side.copy())
+    elif isinstance(expression, Product) and isinstance(expression.left_side, Power) and isinstance(expression.right_side, Power):
+        return expression.left_side.multiply(expression.right_side)
     elif isinstance(expression, BinaryOperation):
         expression.left_side = simplify_trivial(expression.left_side)
         expression.right_side = simplify_trivial(expression.right_side)
